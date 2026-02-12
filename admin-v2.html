@@ -9,10 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <!-- V4 Badge -->
-    <div class="v4-badge">v4</div>
-    <!-- Clean & Fast -->
-    <link rel="stylesheet" href="clean.css">
+    
     <style>
         :root {
             --primary: #ff6b35;
@@ -27,23 +24,6 @@
             --glass-border: rgba(255, 255, 255, 0.1);
         }
 
-        /* V4 Badge */
-        .v4-badge {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #ff6b35, #ff8c42);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 14px;
-            z-index: 10000;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-            font-family: 'Inter', sans-serif;
-            letter-spacing: 1px;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -52,10 +32,10 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             color: var(--text);
-            min-height: 100vh;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
         .admin-container {
@@ -66,68 +46,70 @@
 
         /* Enhanced Sidebar */
         .admin-sidebar {
-            background: linear-gradient(180deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
             border-right: 1px solid var(--glass-border);
+            padding: 30px 20px;
             backdrop-filter: blur(20px);
-            position: relative;
-            overflow: hidden;
         }
 
         .sidebar-header {
-            padding: 30px 20px;
-            border-bottom: 1px solid var(--glass-border);
-            position: relative;
+            text-align: center;
+            margin-bottom: 40px;
         }
 
         .admin-logo {
-            font-size: 2.5rem;
-            font-weight: 900;
+            width: 60px;
+            height: 60px;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-align: center;
-            margin-bottom: 10px;
-            animation: logoGlow 3s ease-in-out infinite alternate;
-        }
-
-        @keyframes logoGlow {
-            from { filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.5)); }
-            to { filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.8)); }
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: white;
+            margin: 0 auto 15px;
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
         }
 
         .admin-subtitle {
-            text-align: center;
             color: var(--text-muted);
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .admin-nav {
-            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
         }
 
         .nav-section {
-            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .nav-title {
-            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
             font-weight: 700;
             text-transform: uppercase;
-            color: var(--text-muted);
-            padding: 0 20px;
-            margin-bottom: 15px;
             letter-spacing: 1px;
+            margin-bottom: 8px;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
+            gap: 15px;
             padding: 15px 20px;
+            border-radius: 12px;
             color: var(--text);
             text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
@@ -135,34 +117,31 @@
         .nav-item::before {
             content: '';
             position: absolute;
-            left: 0;
             top: 0;
-            width: 3px;
+            left: -100%;
+            width: 100%;
             height: 100%;
-            background: var(--primary);
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-        }
-
-        .nav-item:hover {
-            background: var(--glass);
-            color: var(--primary);
-            padding-left: 30px;
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.2), transparent);
+            transition: left 0.5s ease;
         }
 
         .nav-item:hover::before {
-            transform: translateX(0);
+            left: 100%;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 107, 53, 0.1);
+            transform: translateX(5px);
         }
 
         .nav-item.active {
-            background: linear-gradient(90deg, rgba(255, 107, 53, 0.2) 0%, transparent 100%);
-            color: var(--primary);
-            border-left: 3px solid var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
         }
 
         .nav-icon {
             width: 20px;
-            margin-right: 15px;
             text-align: center;
         }
 
@@ -170,23 +149,16 @@
             margin-left: auto;
             background: var(--accent);
             color: var(--secondary);
-            padding: 2px 8px;
+            padding: 4px 8px;
             border-radius: 10px;
             font-size: 0.7rem;
             font-weight: 700;
-            animation: badgePulse 2s infinite;
-        }
-
-        @keyframes badgePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
         }
 
         /* Enhanced Main Content */
         .admin-main {
             padding: 30px;
             overflow-y: auto;
-            position: relative;
         }
 
         .admin-header {
@@ -194,16 +166,11 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 40px;
-            padding: 20px 30px;
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            backdrop-filter: blur(20px);
         }
 
         .header-title {
             font-size: 2.5rem;
-            font-weight: 800;
+            font-weight: 900;
             background: linear-gradient(135deg, var(--text) 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -226,19 +193,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            font-weight: 600;
         }
 
         .header-btn:hover {
             background: var(--primary);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
         }
 
-        /* Enhanced Stats Grid */
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 25px;
             margin-bottom: 40px;
         }
@@ -251,36 +219,13 @@
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--accent), var(--warning));
-            animation: statGradient 3s ease-in-out infinite;
-        }
-
-        @keyframes statGradient {
-            0%, 100% { transform: translateX(-100%); }
-            50% { transform: translateX(100%); }
+            transition: all 0.4s ease;
         }
 
         .stat-card:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.2);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
             border-color: var(--primary);
-        }
-
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
         }
 
         .stat-icon {
@@ -292,32 +237,11 @@
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
-            animation: iconFloat 3s ease-in-out infinite;
-        }
-
-        @keyframes iconFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-
-        .stat-trend {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .trend-up {
-            color: var(--accent);
-        }
-
-        .trend-down {
-            color: var(--danger);
+            margin-bottom: 20px;
         }
 
         .stat-value {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
             margin-bottom: 10px;
             background: linear-gradient(135deg, var(--text) 0%, var(--primary) 100%);
@@ -329,18 +253,12 @@
         .stat-label {
             color: var(--text-muted);
             font-size: 0.9rem;
-            font-weight: 500;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        .stat-chart {
-            margin-top: 20px;
-            height: 100px;
-            position: relative;
-        }
-
-        /* Enhanced Sections */
+        /* Sections */
         .admin-section {
             background: var(--glass);
             border: 1px solid var(--glass-border);
@@ -348,6 +266,11 @@
             padding: 30px;
             margin-bottom: 30px;
             backdrop-filter: blur(20px);
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
         }
 
         .section-header {
@@ -361,16 +284,40 @@
             font-size: 1.8rem;
             font-weight: 700;
             color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 15px;
         }
 
-        .section-actions {
-            display: flex;
-            gap: 10px;
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--glass);
+            border-radius: 15px;
+            overflow: hidden;
         }
 
+        .data-table th {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(255, 107, 53, 0.1));
+            color: var(--primary);
+            font-weight: 700;
+            padding: 20px;
+            text-align: left;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .data-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        /* Buttons */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border: none;
@@ -380,9 +327,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .btn-primary:hover {
@@ -406,39 +350,7 @@
             border-color: var(--primary);
         }
 
-        /* Enhanced Tables */
-        .data-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: var(--glass);
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .data-table th {
-            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(255, 107, 53, 0.1));
-            color: var(--primary);
-            font-weight: 700;
-            padding: 20px;
-            text-align: left;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid var(--primary);
-        }
-
-        .data-table td {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--glass-border);
-            color: var(--text);
-            font-size: 0.95rem;
-        }
-
-        .data-table tr:hover td {
-            background: rgba(255, 107, 53, 0.05);
-        }
-
+        /* Status Indicators */
         .status-indicator {
             display: inline-flex;
             align-items: center;
@@ -481,355 +393,97 @@
             50% { opacity: 0.5; }
         }
 
-        /* Enhanced Charts */
-        .chart-container {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(20px);
+        /* AI Assistant Modal */
+        .ai-assistant-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
         }
 
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .ai-modal-content {
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .ai-modal-content h3 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .ai-chat {
+            height: 300px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
             margin-bottom: 20px;
         }
 
-        .chart-title {
-            font-size: 1.3rem;
-            font-weight: 700;
+        .ai-message, .user-message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 15px;
+            line-height: 1.5;
+        }
+
+        .ai-message {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(255, 107, 53, 0.1));
+            border: 1px solid rgba(255, 107, 53, 0.3);
             color: var(--text);
         }
 
-        .chart-period {
+        .user-message {
+            background: linear-gradient(135deg, rgba(0, 255, 0, 0.2), rgba(0, 255, 0, 0.1));
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: var(--text);
+            margin-left: 40px;
+        }
+
+        .ai-input {
             display: flex;
-            gap: 5px;
+            gap: 10px;
         }
 
-        .period-btn {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            color: var(--text-muted);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        .ai-input input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 1rem;
         }
 
-        .period-btn.active,
-        .period-btn:hover {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        /* Enhanced Mobile Styles */
-        @media (max-width: 1024px) {
-            .admin-container {
-                grid-template-columns: 1fr;
-            }
-
-            .admin-sidebar {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: -280px;
-                height: 100vh;
-                z-index: 1000;
-                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-            }
-
-            .admin-sidebar.open {
-                left: 0;
-            }
-
-            .mobile-menu-toggle {
-                display: block;
-                position: fixed;
-                top: 15px;
-                left: 15px;
-                z-index: 1001;
-                background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-                border: none;
-                color: white;
-                width: 50px;
-                height: 50px;
-                border-radius: 15px;
-                cursor: pointer;
-                box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
-                animation: mobilePulse 2s infinite;
-            }
-
-            @keyframes mobilePulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-            }
-
-            .admin-main {
-                padding: 15px;
-                padding-top: 70px;
-            }
-
-            .header-title {
-                font-size: 1.8rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .stat-value {
-                font-size: 2.5rem;
-            }
-
-            .data-table {
-                font-size: 0.85rem;
-            }
-
-            .data-table th,
-            .data-table td {
-                padding: 12px 8px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .header-title {
-                font-size: 1.5rem;
-            }
-
-            .stat-value {
-                font-size: 2rem;
-            }
-
-            .section-title {
-                font-size: 1.4rem;
-            }
-
-            .chart-container {
-                padding: 15px;
-            }
-
-            .mobile-menu-toggle {
-                width: 45px;
-                height: 45px;
-            }
-        }
-
-        /* 3D Effects and Advanced Animations */
-        .stat-card {
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.05) 0%, 
-                rgba(255, 107, 53, 0.08) 50%, 
-                rgba(255, 255, 255, 0.05) 100%);
-            border: 1px solid rgba(255, 107, 53, 0.2);
-            border-radius: 20px;
-            padding: 30px;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-            perspective: 1000px;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, 
-                var(--primary) 0%, 
-                var(--accent) 25%, 
-                var(--warning) 50%, 
-                var(--accent) 75%, 
-                var(--primary) 100%);
-            animation: statGradient 4s ease-in-out infinite;
-        }
-
-        @keyframes statGradient {
-            0%, 100% { transform: translateX(-100%) scaleX(1); }
-            50% { transform: translateX(100%) scaleX(1.2); }
-        }
-
-        .stat-card:hover {
-            transform: translateY(-15px) rotateX(5deg) scale(1.02);
-            box-shadow: 0 25px 50px rgba(255, 107, 53, 0.3);
-            border-color: var(--primary);
-        }
-
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            animation: iconFloat 4s ease-in-out infinite;
-            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-        }
-
-        @keyframes iconFloat {
-            0%, 100% { 
-                transform: translateY(0) rotate(0deg); 
-                box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-            }
-            25% { 
-                transform: translateY(-8px) rotate(5deg); 
-                box-shadow: 0 12px 35px rgba(255, 107, 53, 0.6);
-            }
-            50% { 
-                transform: translateY(-12px) rotate(0deg); 
-                box-shadow: 0 15px 45px rgba(255, 107, 53, 0.8);
-            }
-            75% { 
-                transform: translateY(-8px) rotate(-5deg); 
-                box-shadow: 0 12px 35px rgba(255, 107, 53, 0.6);
-            }
-        }
-
-        /* Particle Effects */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(0, 255, 0, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 80%, rgba(255, 153, 0, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
-            animation: particleFloat 20s ease-in-out infinite;
-        }
-
-        @keyframes particleFloat {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(30px, -30px) rotate(120deg); }
-            66% { transform: translate(-20px, 20px) rotate(240deg); }
-        }
-
-        /* Enhanced Buttons */
-        .btn-primary {
+        .ai-input button {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border: none;
             color: white;
-            padding: 15px 30px;
-            border-radius: 15px;
-            font-weight: 700;
+            padding: 12px 20px;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            font-weight: 600;
         }
 
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .btn-primary:hover::before {
-            left: 100%;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
-        }
-
-        /* Enhanced Tables */
-        .data-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.02) 0%, 
-                rgba(255, 107, 53, 0.05) 100%);
-            border-radius: 20px;
-            overflow: hidden;
-            backdrop-filter: blur(20px);
-        }
-
-        .data-table th {
-            background: linear-gradient(135deg, 
-                rgba(255, 107, 53, 0.3) 0%, 
-                rgba(255, 107, 53, 0.1) 100%);
-            color: var(--primary);
-            font-weight: 800;
-            padding: 20px;
-            text-align: left;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 3px solid var(--primary);
-            position: relative;
-        }
-
-        .data-table th::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, var(--accent), var(--warning));
-            animation: tableGlow 3s ease-in-out infinite;
-        }
-
-        @keyframes tableGlow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        /* Dark Mode Toggle */
-        .dark-mode-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            color: var(--text);
-            width: 50px;
-            height: 50px;
-            border-radius: 25px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1002;
-            transition: all 0.3s ease;
-        }
-
-        .dark-mode-toggle:hover {
-            background: var(--primary);
-            color: white;
-            transform: rotate(180deg);
-        }
-
-        /* Floating Action Button */
+        /* Floating Actions */
         .floating-actions {
             position: fixed;
             bottom: 30px;
@@ -861,240 +515,66 @@
             box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6);
         }
 
-        /* Enhanced Loading */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-        }
-
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 4px solid var(--glass-border);
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            box-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
-        }
-
-        /* Modal System */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-            border: 1px solid rgba(255, 107, 53, 0.3);
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.3s ease-out;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-content h3 {
-            color: var(--primary);
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            color: var(--text);
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal-actions button {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .keyword-response {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .keyword-response input {
-            flex: 1;
-        }
-
-        .keyword-response button {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .conversation-details,
-        .log-details {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .conversation-details p,
-        .log-details p {
-            margin-bottom: 10px;
-            color: var(--text);
-        }
-
-        .conversation-details strong,
-        .log-details strong {
-            color: var(--primary);
-        }
-
-        /* Loading Animation */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 10, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-        }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 3px solid var(--glass-border);
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Notification System */
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9998;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .notification {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 15px 20px;
-            min-width: 300px;
-            backdrop-filter: blur(20px);
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
+        /* Mobile Responsive */
+        @media (max-width: 1024px) {
+            .admin-container {
+                grid-template-columns: 1fr;
             }
-            to {
-                transform: translateX(0);
-                opacity: 1;
+
+            .admin-sidebar {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: -280px;
+                height: 100vh;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+
+            .admin-sidebar.open {
+                left: 0;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 1001;
+                background: var(--primary);
+                border: none;
+                color: white;
+                width: 50px;
+                height: 50px;
+                border-radius: 15px;
+                cursor: pointer;
+            }
+
+            .admin-main {
+                padding: 15px;
+                padding-top: 70px;
             }
         }
 
-        .notification.success {
-            border-left: 4px solid var(--accent);
-        }
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
 
-        .notification.error {
-            border-left: 4px solid var(--danger);
-        }
+            .header-title {
+                font-size: 1.8rem;
+            }
 
-        .notification.warning {
-            border-left: 4px solid var(--warning);
-        }
-
-        .notification.info {
-            border-left: 4px solid var(--primary);
+            .header-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- V4 Badge -->
-    <div class="v4-badge">v4</div>
-
     <div class="admin-container">
-        <!-- Enhanced Sidebar -->
+        <!-- Sidebar -->
         <aside class="admin-sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="admin-logo">PX</div>
@@ -1107,7 +587,7 @@
                     <a href="#dashboard" class="nav-item active" data-section="dashboard">
                         <i class="fas fa-chart-line nav-icon"></i>
                         <span>Analytics</span>
-                        <span class="nav-badge" id="liveBadge">LIVE</span>
+                        <span class="nav-badge">LIVE</span>
                     </a>
                 </div>
                 
@@ -1142,7 +622,7 @@
             </nav>
         </aside>
 
-        <!-- Enhanced Main Content -->
+        <!-- Main Content -->
         <main class="admin-main">
             <header class="admin-header">
                 <h1 class="header-title">Command Center</h1>
@@ -1157,81 +637,72 @@
                     </button>
                     <button class="header-btn" onclick="toggleFullscreen()">
                         <i class="fas fa-expand"></i>
+                        Fullscreen
+                    </button>
+                    <button class="header-btn" onclick="enterpriseAdmin.enableAIAssistant()">
+                        <i class="fas fa-robot"></i>
+                        AI Assistant
+                    </button>
+                </div>
+            </header>
 
-            .conversation-details p,
-            .log-details p {
-                margin-bottom: 10px;
-                color: var(--text);
-            }
+            <!-- Dashboard Section -->
+            <section class="admin-section active" id="dashboard">
+                <div class="section-header">
+                    <h2 class="section-title">📊 Live Analytics</h2>
+                    <div class="section-actions">
+                        <button class="btn-primary" onclick="enterpriseAdmin.startAdvancedMonitoring()">
+                            <i class="fas fa-play"></i> Start Monitoring
+                        </button>
+                    </div>
+                </div>
 
-            .conversation-details strong,
-            .log-details strong {
-                color: var(--primary);
-            }
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-value" id="activeUsers">0</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
 
-            /* Loading Animation */
-            .loading-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(10, 10, 10, 0.95);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-                backdrop-filter: blur(10px);
-            }
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stat-value" id="onlineStaff">0</div>
+                        <div class="stat-label">Staff Online</div>
+                    </div>
 
-            .loading-spinner {
-                width: 60px;
-                height: 60px;
-                border: 3px solid var(--glass-border);
-                border-top: 3px solid var(--primary);
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-                            </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-value" id="totalMessages">0</div>
+                        <div class="stat-label">Total Messages</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
                         </div>
                         <div class="stat-value" id="avgResponseTime">0s</div>
                         <div class="stat-label">Avg Response</div>
-                        <div class="stat-chart">
-                            <canvas id="responseChart"></canvas>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Advanced Charts -->
                 <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Real-time Activity</h3>
-                        <div class="chart-period">
-                            <button class="period-btn active">1H</button>
-                            <button class="period-btn">24H</button>
-                            <button class="period-btn">7D</button>
-                            <button class="period-btn">30D</button>
-                        </div>
-                    </div>
-                    <canvas id="mainChart" height="100"></canvas>
+                    <canvas id="activityChart"></canvas>
                 </div>
             </section>
 
-            <!-- Enhanced Staff Management -->
-            <section id="staff" class="admin-section" style="display: none;">
+            <!-- Staff Section -->
+            <section class="admin-section" id="staff">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-users"></i>
-                        Staff Management
-                    </h2>
+                    <h2 class="section-title">👥 Staff Management</h2>
                     <div class="section-actions">
-                        <button class="btn-primary liquid-button" onclick="showAddStaffModal()">
-                            <i class="fas fa-plus"></i>
-                            Add Staff
-                        </button>
-                        <button class="btn-secondary liquid-button" onclick="importStaff()">
-                            <i class="fas fa-upload"></i>
-                            Import
+                        <button class="btn-primary" onclick="enterpriseAdmin.addStaff()">
+                            <i class="fas fa-plus"></i> Add Staff
                         </button>
                     </div>
                 </div>
@@ -1248,32 +719,20 @@
                         </tr>
                     </thead>
                     <tbody id="staffTableBody">
-                        <!-- Staff rows will be dynamically added -->
+                        <!-- Staff data will be loaded here -->
                     </tbody>
                 </table>
             </section>
 
-            <!-- Enhanced Chat Management -->
-            <section id="chats" class="admin-section" style="display: none;">
+            <!-- Conversations Section -->
+            <section class="admin-section" id="chats">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-comments"></i>
-                        Live Conversations
-                    </h2>
+                    <h2 class="section-title">💬 Active Conversations</h2>
                     <div class="section-actions">
-                        <button class="btn-primary" onclick="showAutoResponse()">
-                            <i class="fas fa-robot"></i>
-                            Auto-Response
-                        </button>
-                        <button class="btn-secondary" onclick="exportChats()">
-                            <i class="fas fa-download"></i>
-                            Export All
+                        <button class="btn-primary" onclick="enterpriseAdmin.assignAllConversations()">
+                            <i class="fas fa-user-plus"></i> Assign All
                         </button>
                     </div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="conversationChart" height="80"></canvas>
                 </div>
 
                 <table class="data-table">
@@ -1281,7 +740,7 @@
                         <tr>
                             <th>Conversation ID</th>
                             <th>Customer</th>
-                            <th>Staff Assigned</th>
+                            <th>Staff</th>
                             <th>Status</th>
                             <th>Duration</th>
                             <th>Sentiment</th>
@@ -1289,176 +748,41 @@
                         </tr>
                     </thead>
                     <tbody id="conversationsTable">
-                        <!-- Conversation rows will be dynamically added -->
+                        <!-- Conversation data will be loaded here -->
                     </tbody>
                 </table>
             </section>
 
             <!-- Users Section -->
-            <section id="users" class="admin-section" style="display: none;">
+            <section class="admin-section" id="users">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-user"></i>
-                        User Analytics
-                    </h2>
+                    <h2 class="section-title">👤 User Management</h2>
                     <div class="section-actions">
-                        <button class="btn-secondary" onclick="exportUsers()">
-                            <i class="fas fa-download"></i>
-                            Export Users
+                        <button class="btn-primary" onclick="enterpriseAdmin.exportUsers()">
+                            <i class="fas fa-download"></i> Export Users
                         </button>
                     </div>
                 </div>
-
-                <!-- Enhanced Stats Grid - Simplified -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-trend trend-up">
-                                <i class="fas fa-arrow-up"></i>
-                                +12%
-                            </div>
-                        </div>
-                        <div class="stat-value" id="activeUsersCount">0</div>
-                        <div class="stat-label">Active Users</div>
-                        <div class="stat-chart">
-                            <canvas id="usersChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">
-                                <i class="fas fa-user-shield"></i>
-                            </div>
-                            <div class="stat-trend trend-up">
-                                <i class="fas fa-arrow-up"></i>
-                                +8%
-                            </div>
-                        </div>
-                        <div class="stat-value" id="onlineStaffCount">0</div>
-                        <div class="stat-label">Staff Online</div>
-                        <div class="stat-chart">
-                            <canvas id="staffChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">
-                                <i class="fas fa-comments"></i>
-                            </div>
-                            <div class="stat-trend trend-down">
-                                <i class="fas fa-arrow-down"></i>
-                                -3%
-                            </div>
-                        </div>
-                        <div class="stat-value" id="totalMessagesCount">0</div>
-                        <div class="stat-label">Total Messages</div>
-                        <div class="stat-chart">
-                            <canvas id="messagesChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-trend trend-up">
-                                <i class="fas fa-arrow-up"></i>
-                                +15%
-                            </div>
-                        </div>
-                        <div class="stat-value" id="avgResponseTime">0s</div>
-                        <div class="stat-label">Avg Response</div>
-                        <div class="stat-chart">
-                            <canvas id="responseChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+                <p style="color: var(--text-muted);">User management features coming soon...</p>
             </section>
 
             <!-- Settings Section -->
-            <section id="settings" class="admin-section" style="display: none;">
+            <section class="admin-section" id="settings">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-cog"></i>
-                        System Configuration
-                    </h2>
-                    <div class="section-actions">
-                        <button class="btn-primary" onclick="saveAllSettings()">
-                            <i class="fas fa-save"></i>
-                            Save All
-                        </button>
-                    </div>
+                    <h2 class="section-title">⚙️ System Settings</h2>
                 </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>General Settings</h3>
-                        <div class="form-group">
-                            <label>Site Title</label>
-                            <input type="text" id="siteTitle" value="P.X HB Support">
-                        </div>
-                        <div class="form-group">
-                            <label>Max Concurrent Chats</label>
-                            <input type="number" id="maxChats" value="100">
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <h3>Chat Settings</h3>
-                        <div class="form-group">
-                            <label>Welcome Message</label>
-                            <textarea id="welcomeMessage" rows="3">👋 Welcome to P.X HB Support!</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Auto-Response</label>
-                            <textarea id="autoResponse" rows="2">Please wait for staff to join.</textarea>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <h3>Security</h3>
-                        <div class="form-group">
-                            <label>Session Timeout (minutes)</label>
-                            <input type="number" id="sessionTimeout" value="30">
-                        </div>
-                        <div class="form-group">
-                            <label>Enable Rate Limiting</label>
-                            <select id="rateLimiting">
-                                <option value="enabled">Enabled</option>
-                                <option value="disabled">Disabled</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                <p style="color: var(--text-muted);">Settings panel coming soon...</p>
             </section>
 
-            <!-- System Logs -->
-            <section id="logs" class="admin-section" style="display: none;">
+            <!-- Logs Section -->
+            <section class="admin-section" id="logs">
                 <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-file-alt"></i>
-                        System Logs
-                    </h2>
+                    <h2 class="section-title">📋 System Logs</h2>
                     <div class="section-actions">
-                        <button class="btn-secondary" onclick="clearLogs()">
-                            <i class="fas fa-trash"></i>
-                            Clear Logs
-                        </button>
-                        <button class="btn-secondary" onclick="downloadLogs()">
-                            <i class="fas fa-download"></i>
-                            Download
+                        <button class="btn-primary" onclick="enterpriseAdmin.clearLogs()">
+                            <i class="fas fa-trash"></i> Clear Logs
                         </button>
                     </div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="logsChart" height="80"></canvas>
                 </div>
 
                 <table class="data-table">
@@ -1472,24 +796,11 @@
                         </tr>
                     </thead>
                     <tbody id="logsTable">
-                        <!-- Log entries will be dynamically added -->
+                        <!-- Log data will be loaded here -->
                     </tbody>
                 </table>
             </section>
         </main>
-    </div>
-
-    <!-- Floating Action Buttons -->
-    <div class="floating-actions">
-        <button class="fab" onclick="toggleDarkMode()" title="Toggle Dark Mode">
-            <i class="fas fa-moon"></i>
-        </button>
-        <button class="fab" onclick="refreshData()" title="Refresh Data">
-            <i class="fas fa-sync-alt"></i>
-        </button>
-        <button class="fab" onclick="exportData()" title="Export Data">
-            <i class="fas fa-download"></i>
-        </button>
     </div>
 
     <!-- Mobile Menu Toggle -->
@@ -1497,15 +808,19 @@
         <i class="fas fa-bars"></i>
     </button>
 
-    <!-- Notification Container -->
-    <div class="notification-container" id="notificationContainer"></div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
-        <div class="loading-spinner"></div>
+    <!-- Floating Actions -->
+    <div class="floating-actions">
+        <button class="fab" onclick="enterpriseAdmin.showQuickSearch()" title="Quick Search (Ctrl+K)">
+            <i class="fas fa-search"></i>
+        </button>
+        <button class="fab" onclick="enterpriseAdmin.exportDetailedReport()" title="Export Report">
+            <i class="fas fa-file-export"></i>
+        </button>
+        <button class="fab" onclick="enterpriseAdmin.enableAIAssistant()" title="AI Assistant">
+            <i class="fas fa-robot"></i>
+        </button>
     </div>
 
     <script src="admin-v2.js"></script>
-    <script src="simple-chat.js"></script>
 </body>
 </html>
