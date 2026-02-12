@@ -235,151 +235,128 @@ function toggleChatWidget() {
     }
 }
 
-// 🚀 SIMPLE CHAT - WORKING VERSION
+// Message Functions - Now with Firebase Real-time!
+let isSendingMessage = false;
 
-// Initialize socket
-let socket = null;
-
-// Connect to server
-function connectSocket() {
-    try {
-        socket = io();
-        
-        socket.on('connect', () => {
-            console.log('✅ Connected to server');
-            window.socket = socket;
-        });
-        
-        socket.on('disconnect', () => {
-            console.log('❌ Disconnected');
-        });
-        
-        socket.on('newMessage', (message) => {
-            console.log('📨 Message received:', message);
-            
-            if (message.senderType === 'user') {
-                addMessage(message.content, 'user');
-            } else if (message.senderType === 'staff') {
-                addMessage(message.content, 'staff');
-            } else if (message.senderType === 'system') {
-                addMessage(message.content, 'system');
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ Socket error:', error);
-    }
-}
-
-// Send message function
 function sendMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     
-    if (!message) return;
+    console.log('Sending message:', message); // Debug log
     
-    console.log('📤 Sending:', message);
-    
-    // Clear input
-    input.value = '';
-    
-    // Add to UI
-    addMessage(message, 'user');
-    
-    // Send to server
-    if (socket && socket.connected) {
-        socket.emit('chatMessage', {
-            content: message,
-            sender: 'User',
-            senderType: 'user',
-            timestamp: new Date()
-        });
-    }
-    
-    // Auto response
-    if (!staffLoggedIn) {
+    if (message && !isSendingMessage) {
+        isSendingMessage = true; // Prevent duplicate sends
+        
+        // Use Firebase if available, otherwise fallback to local
+        if (window.firebaseChat) {
+            window.firebaseChat.sendMessage(message, 'User', 'user');
+        } else {
+            addMessage(message, 'user');
+        }
+        
+        input.value = '';
+        
+        // Only show waiting message if staff is NOT logged in and no Firebase
+        if (!staffLoggedIn && !window.firebaseChat) {
+            setTimeout(() => {
+                if (window.firebaseChat) {
+                    window.firebaseChat.sendMessage('Please wait for a staff member to join the chat. Staff will respond when available.', 'System', 'system');
+                } else {
+                    addMessage('Please wait for a staff member to join the chat. Staff will respond when available.', 'system');
+                }
+            }, 1000);
+        }
+        
+        // Reset sending flag after a short delay
         setTimeout(() => {
-            addMessage('👋 Staff will respond when available.', 'system');
+            isSendingMessage = false;
         }, 1000);
     }
 }
 
-// Staff message
-function sendStaffMessage() {
-    if (!staffLoggedIn) return;
-    
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    
-    if (!message) return;
-    
-    console.log('📤 Staff sending:', message);
-    
-    input.value = '';
-    addMessage(message, 'staff');
-    
-    if (socket && socket.connected) {
-        socket.emit('chatMessage', {
-            content: message,
-            sender: currentUser || 'Staff',
-            senderType: 'staff',
-            timestamp: new Date()
-        });
-    }
-}
-
-// Widget message
 function sendWidgetMessage() {
     const input = document.getElementById('widgetInput');
     const message = input.value.trim();
     
-    if (!message) return;
+    console.log('Sending widget message:', message); // Debug log
     
-    console.log('📤 Widget sending:', message);
-    
-    input.value = '';
-    addWidgetMessage(message, 'user');
-    
-    if (socket && socket.connected) {
-        socket.emit('chatMessage', {
-            content: message,
-            sender: 'User',
-            senderType: 'user',
-            timestamp: new Date()
-        });
-    }
-    
-    if (!staffLoggedIn) {
+    if (message && !isSendingMessage) {
+        isSendingMessage = true;
+        
+        if (window.firebaseChat) {
+            window.firebaseChat.sendMessage(message, 'User', 'user');
+        } else {
+            addWidgetMessage(message, 'user');
+        }
+        
+        input.value = '';
+        
+        if (!staffLoggedIn && !window.firebaseChat) {
+            setTimeout(() => {
+                if (window.firebaseChat) {
+                    window.firebaseChat.sendMessage('Staff will respond when available.', 'System', 'system');
+                } else {
+                    addWidgetMessage('Staff will respond when available.', 'system');
+                }
+            }, 1000);
+        }
+        
         setTimeout(() => {
-            addWidgetMessage('Staff will respond when available.', 'system');
+            isSendingMessage = false;
         }, 1000);
     }
 }
 
-// Quick message
 function sendQuickMessage(message) {
-    console.log('📤 Quick sending:', message);
+    console.log('Sending quick message:', message); // Debug log
     
-    addMessage(message, 'user');
-    
-    if (socket && socket.connected) {
-        socket.emit('chatMessage', {
-            content: message,
-            sender: 'User',
-            senderType: 'user',
-            timestamp: new Date()
-        });
-    }
-    
-    if (!staffLoggedIn) {
+    if (!isSendingMessage) {
+        isSendingMessage = true;
+        
+        if (window.firebaseChat) {
+            window.firebaseChat.sendMessage(message, 'User', 'user');
+        } else {
+            addMessage(message, 'user');
+        }
+        
+        if (!staffLoggedIn && !window.firebaseChat) {
+            setTimeout(() => {
+                if (window.firebaseChat) {
+                    window.firebaseChat.sendMessage('Your message has been queued. Staff will respond when available.', 'System', 'system');
+                } else {
+                    addMessage('Your message has been queued. Staff will respond when available.', 'system');
+                }
+            }, 1000);
+        }
+        
         setTimeout(() => {
-            addMessage('Message queued. Staff will respond.', 'system');
+            isSendingMessage = false;
         }, 1000);
     }
 }
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', connectSocket);
+// Staff can send messages
+function sendStaffMessage() {
+    if (!staffLoggedIn) {
+        console.log('Staff not logged in, cannot send message');
+        return;
+    }
+    
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    console.log('Sending staff message:', message); // Debug log
+    
+    if (message) {
+        if (window.firebaseChat) {
+            window.firebaseChat.sendMessage(message, currentUser || 'Staff', 'staff');
+        } else {
+            addMessage(message, 'staff');
+        }
+        
+        input.value = '';
+    }
+}
 
 // Mobile Staff Login
 function showMobileStaffLogin() {

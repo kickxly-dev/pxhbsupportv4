@@ -98,81 +98,48 @@ app.post('/api/staff-login', (req, res) => {
     }
 });
 
-// Enhanced Socket.IO handlers for real admin data
+// Socket.IO for real-time communication
 io.on('connection', (socket) => {
-    console.log('� User connected:', socket.id);
+    console.log('🔗 User connected:', socket.id);
     
-    // Handle admin data requests
-    socket.on('getAdminData', () => {
-        const adminData = {
-            activeUsers: Array.from(io.sockets.sockets).length,
-            onlineStaff: staffStatus.isOnline ? 1 : 0,
-            totalMessages: messages.length,
-            avgResponseTime: Math.floor(Math.random() * 60) + 30,
-            staffMembers: [
-                { username: 'admin', role: 'Administrator', status: staffStatus.isOnline ? 'online' : 'offline', performance: 98, lastActive: '2 min ago' },
-                { username: 'support', role: 'Support Agent', status: 'offline', performance: 92, lastActive: '1 hour ago' },
-                { username: 'moderator', role: 'Moderator', status: 'offline', performance: 85, lastActive: '2 hours ago' }
-            ],
-            conversations: generateConversations()
-        };
-        socket.emit('adminData', adminData);
-    });
-    
-    socket.on('getRealTimeStats', () => {
-        const realTimeStats = {
-            activeUsers: Array.from(io.sockets.sockets).length,
-            onlineStaff: staffStatus.isOnline ? 1 : 0,
-            totalMessages: messages.length,
-            avgResponseTime: Math.floor(Math.random() * 60) + 30
-        };
-        socket.emit('realTimeStats', realTimeStats);
-    });
-    
-    // Handle staff management
-    socket.on('addStaff', (staffData) => {
-        console.log('👥 Adding staff:', staffData);
-        socket.emit('staffAdded', { success: true, staff: staffData });
-    });
-    
-    socket.on('updateStaff', (staffData) => {
-        console.log('✏️ Updating staff:', staffData);
-        socket.emit('staffUpdated', { success: true, staff: staffData });
-    });
-    
-    // Handle auto-response
-    socket.on('updateAutoResponse', (settings) => {
-        console.log('🤖 Updating auto-response:', settings);
-        socket.emit('autoResponseUpdated', { success: true, settings });
-    });
-    
-    // Handle conversation assignment
-    socket.on('assignConversation', (data) => {
-        console.log('📞 Assigning conversation:', data);
-        socket.emit('conversationAssigned', { success: true, assignment: data });
-    });
-    
-    // Handle settings
-    socket.on('saveSettings', (settings) => {
-        console.log('⚙️ Saving settings:', settings);
-        socket.emit('settingsSaved', { success: true, settings });
-    });
+    // Send current messages and staff status
+    socket.emit('messages', messages.slice(-50));
+    socket.emit('staffStatusUpdate', staffStatus);
     
     // Handle new messages
-    socket.on('chatMessage', (message) => {
+    socket.on('sendMessage', (messageData) => {
+        const message = {
+            id: Date.now(),
+            text: messageData.text,
+            sender: messageData.sender,
+            senderType: messageData.senderType,
+            timestamp: new Date().toISOString()
+        };
+        
         messages.push(message);
+        
+        // Keep only last 100 messages
         if (messages.length > 100) {
             messages = messages.slice(-100);
         }
+        
+        // Broadcast to all clients
         io.emit('newMessage', message);
     });
     
     // Handle staff status updates
     socket.on('updateStaffStatus', (status) => {
-        staffStatus = status;
-        io.emit('staffStatusUpdate', status);
+        staffStatus = {
+            ...staffStatus,
+            ...status,
+            lastSeen: new Date().toISOString()
+        };
+        
+        // Broadcast to all clients
+        io.emit('staffStatusUpdate', staffStatus);
     });
     
+    // Handle disconnection
     socket.on('disconnect', () => {
         console.log('❌ User disconnected:', socket.id);
     });
@@ -199,7 +166,93 @@ app.get('/api/admin/stats', (req, res) => {
         activeUsers: Math.floor(Math.random() * 20) + 5,
         onlineStaff: staffStatus.isOnline ? 1 : 0,
         totalMessages: messages.length,
-        avgResponseTime: Math.floor(Math.random() * 60) + 30
+        avgResponseTime: Math.floor(Math.random() * 60) + 30,
+        newUsers: Math.floor(Math.random() * 20) + 5,
+        returningUsers: Math.floor(Math.random() * 100) + 50,
+        countries: Math.floor(Math.random() * 30) + 10,
+        unreadCount: Math.floor(Math.random() * 15)
+    });
+});
+
+app.get('/api/admin/staff', (req, res) => {
+    res.json({
+        staff: [
+            { username: 'admin', role: 'Administrator', status: 'online', performance: 98, lastActive: '2 min ago', chatsHandled: 245, avgResponseTime: 45 },
+            { username: 'support', role: 'Support Agent', status: 'online', performance: 92, lastActive: '5 min ago', chatsHandled: 189, avgResponseTime: 52 },
+            { username: 'moderator', role: 'Moderator', status: 'offline', performance: 85, lastActive: '1 hour ago', chatsHandled: 156, avgResponseTime: 68 }
+        ]
+    });
+});
+
+app.get('/api/admin/conversations', (req, res) => {
+    res.json({
+        conversations: [
+            { id: 'CV001', customer: 'John Doe', staff: 'admin', status: 'active', duration: '12 min', sentiment: 'positive', priority: 'high', messages: 8 },
+            { id: 'CV002', customer: 'Jane Smith', staff: 'support', status: 'waiting', duration: '5 min', sentiment: 'neutral', priority: 'medium', messages: 3 },
+            { id: 'CV003', customer: 'Bob Wilson', staff: 'moderator', status: 'completed', duration: '25 min', sentiment: 'positive', priority: 'low', messages: 15 },
+            { id: 'CV004', customer: 'Alice Johnson', staff: 'none', status: 'queue', duration: '2 min', sentiment: 'neutral', priority: 'high', messages: 1 },
+            { id: 'CV005', customer: 'Charlie Brown', staff: 'support', status: 'active', duration: '18 min', sentiment: 'positive', priority: 'medium', messages: 12 }
+        ]
+    });
+});
+
+app.get('/api/admin/logs', (req, res) => {
+    res.json({
+        logs: [
+            { timestamp: new Date(), level: 'info', source: 'server', message: 'System started successfully', details: 'All services operational' },
+            { timestamp: new Date(Date.now() - 300000), level: 'warning', source: 'auth', message: 'Failed login attempt', details: 'IP: 192.168.1.100' },
+            { timestamp: new Date(Date.now() - 600000), level: 'error', source: 'database', message: 'Connection timeout', details: 'Retrying connection...' },
+            { timestamp: new Date(Date.now() - 900000), level: 'success', source: 'chat', message: 'New conversation started', details: 'User: John Doe' },
+            { timestamp: new Date(Date.now() - 1200000), level: 'info', source: 'staff', message: 'Staff member online', details: 'User: admin' }
+        ]
+    });
+});
+
+// Advanced API endpoints
+app.post('/api/admin/staff/message', (req, res) => {
+    const { target, message } = req.body;
+    console.log(`Message to ${target}: ${message}`);
+    res.json({ success: true, message: 'Message sent successfully' });
+});
+
+app.post('/api/admin/conversation/close', (req, res) => {
+    const { id } = req.body;
+    console.log(`Closing conversation: ${id}`);
+    res.json({ success: true, message: 'Conversation closed successfully' });
+});
+
+app.get('/api/admin/performance', (req, res) => {
+    res.json({
+        uptime: '99.9%',
+        responseTime: Math.floor(Math.random() * 60) + 30,
+        satisfactionRate: '4.8/5.0',
+        resolutionRate: '92%',
+        escalationRate: '3%',
+        serverLoad: Math.floor(Math.random() * 30) + 20,
+        memoryUsage: Math.floor(Math.random() * 40) + 30,
+        activeConnections: Math.floor(Math.random() * 50) + 10
+    });
+});
+
+app.get('/api/admin/analytics', (req, res) => {
+    const period = req.query.period || '24h';
+    res.json({
+        period,
+        data: {
+            users: Array.from({ length: 24 }, (_, i) => ({
+                hour: i,
+                active: Math.floor(Math.random() * 100) + 20,
+                new: Math.floor(Math.random() * 20) + 5
+            })),
+            messages: Array.from({ length: 24 }, (_, i) => ({
+                hour: i,
+                count: Math.floor(Math.random() * 50) + 10
+            })),
+            responseTime: Array.from({ length: 24 }, (_, i) => ({
+                hour: i,
+                avgTime: Math.floor(Math.random() * 60) + 30
+            }))
+        }
     });
 });
 
