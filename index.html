@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.X HB Support - Live Chat & Help Center</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Socket.IO for Self-Hosted Real-Time Chat -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-logo">PX</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+            </div>
+            <div class="loading-text">Connecting Support<span class="loading-dots"></span></div>
+        </div>
+    </div>
+
+    <!-- Hidden Staff Login (Konami Code: ↑↑↓↓←→←→BA) -->
+    <div class="staff-login-panel" id="staffLogin" style="display: none;">
+        <div class="login-container">
+            <h3>Staff Login</h3>
+            <form id="staffLoginForm">
+                <input type="text" id="staffUsername" placeholder="Username" required>
+                <input type="password" id="staffPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+                <button type="button" onclick="closeStaffLogin()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="logo">PX</div>
+                <span class="brand-text">HB Support</span>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#chat" class="nav-link">Live Chat</a>
+                <a href="#faq" class="nav-link">FAQ</a>
+                <a href="#contact" class="nav-link">Contact</a>
+            </div>
+            <button class="chat-toggle-btn" onclick="toggleChat()">
+                <i class="fas fa-comments"></i>
+                <span>Start Chat</span>
+            </button>
+            <!-- Mobile Staff Login Button -->
+            <button class="mobile-staff-login" onclick="showMobileStaffLogin()">
+                <i class="fas fa-user-shield"></i>
+                <span>Staff</span>
+            </button>
+            <div class="staff-status" id="staffStatus" style="display: none;">
+                <i class="fas fa-user-shield"></i>
+                <span id="staffName">Staff Online</span>
+                <button class="logout-btn" onclick="logoutStaff()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-headset"></i>
+                24/7 Support Available
+            </div>
+            <h1>P.X HB Support Center</h1>
+            <p class="hero-subtitle">Get instant help from our support team. We're here to assist you with any questions or issues.</p>
+            <div class="hero-buttons">
+                <button class="btn-primary" onclick="toggleChat()">
+                    <i class="fas fa-comments"></i>
+                    Start Live Chat
+                </button>
+                <button class="btn-secondary" onclick="scrollToSection('faq')">
+                    <i class="fas fa-question-circle"></i>
+                    Browse FAQ
+                </button>
+            </div>
+            <div class="support-stats">
+                <div class="stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Available</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">< 2min</div>
+                    <div class="stat-label">Response Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Satisfaction</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Chat Section -->
+    <section class="chat-section" id="chat">
+        <div class="container">
+            <div class="section-header">
+                <h2>Live Chat Support</h2>
+                <p>Connect with our support team instantly</p>
+            </div>
+            <div class="chat-container">
+                <div class="chat-window">
+                    <div class="chat-header">
+                        <div class="chat-agent-info">
+                            <div class="agent-avatar">
+                                <i class="fas fa-headset"></i>
+                            </div>
+                            <div class="agent-details">
+                                <h3>Support Team</h3>
+                                <span class="agent-status online">Online</span>
+                            </div>
+                        </div>
+                        <button class="chat-minimize" onclick="toggleChat()">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <p>👋 Welcome to P.X HB Support! Please wait for a staff member to join the chat.</p>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        </div>
+                        <div class="system-message" id="systemMessage" style="display: none;">
+                            <div class="message-content">
+                                <p>📝 Staff member has joined the chat</p>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <div class="input-group">
+                            <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleChatInput(event)">
+                            <button class="send-btn" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="quick-action" onclick="sendQuickMessage('I need help with installation')">
+                                Installation Help
+                            </button>
+                            <button class="quick-action" onclick="sendQuickMessage('I have a billing question')">
+                                Billing Question
+                            </button>
+                            <button class="quick-action" onclick="sendQuickMessage('I found a bug')">
+                                Report Bug
+                            </button>
+                            <button class="quick-action" onclick="sendQuickMessage('I need account help')">
+                                Account Help
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2>Frequently Asked Questions</h2>
+                <p>Quick answers to common questions</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>How do I install P.X HB tools?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Installation is simple! Download the tool from our Discord, run the installer, and follow the on-screen instructions. Most tools install in under 2 minutes.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>Is P.X HB safe to use?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! Our tools are built with safety as a top priority. We use advanced detection avoidance and regular updates to ensure maximum security.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>What payment methods do you accept?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We accept all major credit cards, PayPal, Bitcoin, and various cryptocurrencies. All payments are secure and encrypted.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>How do I get updates?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Updates are delivered automatically through our launcher. You'll also receive notifications in our Discord server when new versions are available.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>Can I get a refund?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We offer a 7-day money-back guarantee. If you're not satisfied with our tools, contact support within 7 days for a full refund.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <h3>Do you offer customer support?</h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! We provide 24/7 customer support through live chat, Discord, and email. Our average response time is under 2 minutes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2>Other Ways to Reach Us</h2>
+                <p>Multiple channels for your convenience</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-discord"></i>
+                    </div>
+                    <h3>Discord Server</h3>
+                    <p>Join our community for support and updates</p>
+                    <a href="https://discord.com/invite/8mcQFUVX8V" target="_blank" class="contact-btn">
+                        <i class="fas fa-external-link-alt"></i>
+                        Join Discord
+                    </a>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <h3>Email Support</h3>
+                    <p>Send us an email for detailed inquiries</p>
+                    <a href="mailto:support@pxhb.com" class="contact-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        Send Email
+                    </a>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <h3>Support Ticket</h3>
+                    <p>Create a ticket for complex issues</p>
+                    <a href="#" class="contact-btn" onclick="createTicket()">
+                        <i class="fas fa-plus"></i>
+                        Create Ticket
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>P.X HB Support</h3>
+                <p>Your dedicated support team for all P.X HB products and services.</p>
+                <div class="social-links">
+                    <a href="https://discord.com/invite/8mcQFUVX8V" target="_blank">
+                        <i class="fab fa-discord"></i>
+                    </a>
+                    <a href="#" target="_blank">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" target="_blank">
+                        <i class="fab fa-youtube"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <div class="footer-links">
+                    <a href="#home">Home</a>
+                    <a href="#chat">Live Chat</a>
+                    <a href="#faq">FAQ</a>
+                    <a href="#contact">Contact</a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Support Hours</h3>
+                <p>24/7 Live Chat Support</p>
+                <p>Email: Within 24 hours</p>
+                <p>Discord: Always available</p>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2024 P.X HB Support. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Floating Chat Widget -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-widget-header" onclick="toggleChat()">
+            <div class="widget-info">
+                <div class="widget-avatar">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="widget-text">
+                    <h4>Support Team</h4>
+                    <span class="widget-status online">Online</span>
+                </div>
+            </div>
+            <button class="widget-toggle">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </div>
+        <div class="chat-widget-body" id="chatWidgetBody">
+            <div class="widget-messages" id="widgetMessages">
+                <div class="message bot-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <p>Hi! How can I help you today?</p>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+            <div class="widget-input">
+                <input type="text" id="widgetInput" placeholder="Type a message..." onkeypress="handleWidgetInput(event)">
+                <button onclick="sendWidgetMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="self-hosted-chat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
