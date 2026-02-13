@@ -1,13 +1,15 @@
-// P.X HB Admin Panel JavaScript
+﻿// P.X HB Admin Panel JavaScript
 const socket = io();
 let currentSection = 'dashboard';
 let selectedChat = null;
+let conversationsById = new Map();
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function () {
     checkAuth();
     loadDashboardData();
     setupSocketEvents();
+    socket.emit('adminInit');
 });
 
 function checkAuth() {
@@ -20,10 +22,31 @@ function checkAuth() {
 }
 
 function setupSocketEvents() {
-    socket.on('newMessage', () => {
-        if (currentSection === 'chats') {
-            updateChatList();
+    socket.on('adminConversations', (list) => {
+        const arr = Array.isArray(list) ? list : [];
+        conversationsById = new Map(arr.map((c) => [c.socketId, c]));
+        renderChatList(arr);
+        updateStats();
+    });
+
+    socket.on('adminConversationMessages', (payload) => {
+        const socketId = payload?.socketId;
+        if (!socketId) return;
+        selectedChat = socketId;
+        renderChatMessages(payload?.messages || []);
+        highlightSelectedChat(socketId);
+        updateStats();
+    });
+
+    socket.on('adminMessage', (payload) => {
+        const socketId = payload?.socketId;
+        const message = payload?.message;
+        if (!socketId || !message) return;
+
+        if (selectedChat && socketId === selectedChat) {
+            appendChatMessage(message);
         }
+
         updateStats();
     });
 }
@@ -72,8 +95,8 @@ function loadDashboardData() {
             updateStatsDisplay({
                 activeUsers: Math.floor(Math.random() * 50) + 10,
                 totalMessages: Math.floor(Math.random() * 200) + 50,
-                staffOnline: 1,
-                avgResponse: Math.floor(Math.random() * 30) + 15
+                staffOnline: 0,
+                avgResponse: 0
             });
         });
 }
@@ -94,53 +117,18 @@ function updateStats() {
     loadDashboardData();
 }
 
-// Chat functions (demo UI)
+// Chat functions
 function loadChatList() {
-    const chatList = document.querySelector('.chat-list');
-    if (!chatList) return;
-
-    chatList.innerHTML = `
-        <div class="chat-item" onclick="selectChat('user1', this)">
-            <div class="chat-item-header">
-                <span class="chat-user">User 1</span>
-                <span class="chat-time">2 min ago</span>
-            </div>
-            <div class="chat-preview">I need help with my account...</div>
-        </div>
-        <div class="chat-item" onclick="selectChat('user2', this)">
-            <div class="chat-item-header">
-                <span class="chat-user">User 2</span>
-                <span class="chat-time">5 min ago</span>
-            </div>
-            <div class="chat-preview">Technical issue with login...</div>
-        </div>
-        <div class="chat-item" onclick="selectChat('user3', this)">
-            <div class="chat-item-header">
-                <span class="chat-user">User 3</span>
-                <span class="chat-time">10 min ago</span>
-            </div>
-            <div class="chat-preview">Billing question...</div>
-        </div>
-    `;
+    socket.emit('adminInit');
 }
 
-function selectChat(userId, el) {
-    selectedChat = userId;
+function selectChat(socketId, el) {
+    selectedChat = socketId;
 
     document.querySelectorAll('.chat-item').forEach((item) => item.classList.remove('selected'));
     if (el) el.classList.add('selected');
 
-    const chatMessages = document.getElementById('adminChatMessages');
-    if (!chatMessages) return;
-
-    chatMessages.innerHTML = `
-        <div class="message user">
-            <div class="message-content"><p>Hello, I need help with my account</p></div>
-        </div>
-        <div class="message staff">
-            <div class="message-content"><p>Hello! I'm here to help. What seems to be the issue?</p></div>
-        </div>
-    `;
+    socket.emit('adminSelectConversation', { socketId });
 }
 
 function sendAdminMessage() {
@@ -148,13 +136,7 @@ function sendAdminMessage() {
     const message = (input?.value || '').trim();
     if (!message || !selectedChat) return;
 
-    socket.emit('sendMessage', {
-        text: message,
-        user: sessionStorage.getItem('staffUser') || 'Staff',
-        type: 'staff'
-    });
-
-    addAdminMessage(message, 'staff');
+    socket.emit('adminSendMessage', { socketId: selectedChat, text: message });
     if (input) input.value = '';
 }
 
@@ -184,7 +166,54 @@ function updateChatList() {
 function logout() {
     sessionStorage.removeItem('staffUser');
     sessionStorage.removeItem('staffLoggedIn');
-    window.location.href = '/';
+    fetch('/api/staff/logout', { method: 'POST' }).finally(() => {
+        window.location.href = '/';
+    });
+}
+
+function renderChatList(list) {
+    const chatList = document.getElementById('adminChatList') || document.querySelector('.chat-list');
+    if (!chatList) return;
+
+    const arr = Array.isArray(list) ? list : [];
+    chatList.innerHTML = arr
+        .map((c) => {
+            const timeText = c.lastAt ? new Date(c.lastAt).toLocaleTimeString() : '';
+            const preview = escapeHtml(String(c.lastText || ''));
+            const name = escapeHtml(String(c.name || c.socketId));
+            const unread = Number(c.unread || 0);
+            const right = unread > 0 ? `${unread}` : escapeHtml(timeText);
+
+            return `
+        <div class="chat-item" data-socket-id="${escapeHtml(String(c.socketId))}" onclick="selectChat('${escapeHtml(String(c.socketId))}', this)">
+            <div class="chat-item-header">
+                <span class="chat-user">${name}${c.connected ? '' : ' (disconnected)'}</span>
+                <span class="chat-time">${right}</span>
+            </div>
+            <div class="chat-preview">${preview}</div>
+        </div>`;
+        })
+        .join('');
+
+    if (selectedChat) highlightSelectedChat(selectedChat);
+}
+
+function highlightSelectedChat(socketId) {
+    document.querySelectorAll('.chat-item').forEach((item) => item.classList.remove('selected'));
+    const el = document.querySelector(`.chat-item[data-socket-id="${CSS.escape(String(socketId))}"]`);
+    if (el) el.classList.add('selected');
+}
+
+function renderChatMessages(messages) {
+    const chatMessages = document.getElementById('adminChatMessages');
+    if (!chatMessages) return;
+    chatMessages.innerHTML = '';
+    (Array.isArray(messages) ? messages : []).forEach((m) => appendChatMessage(m));
+}
+
+function appendChatMessage(message) {
+    if (!message) return;
+    addAdminMessage(message.text || '', message.type || 'user');
 }
 
 function escapeHtml(str) {
