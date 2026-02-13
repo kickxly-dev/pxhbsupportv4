@@ -1,4 +1,4 @@
-/* P.X HB Support - Orange & Black Theme */
+/* P.X HB Support - INSANE Orange & Black Theme */
 :root {
     --orange-primary: #ff6b35;
     --orange-glow: #ff8c42;
@@ -23,10 +23,48 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
+    position: relative;
+}
+
+/* Animated Background */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(0, 255, 0, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 153, 0, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 60% 30%, rgba(0, 204, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+    animation: particleFloat 25s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+    0%, 100% { 
+        transform: translate(0, 0) rotate(0deg) scale(1); 
+        filter: hue-rotate(0deg);
+    }
+    25% { 
+        transform: translate(30px, -30px) rotate(90deg) scale(1.1); 
+        filter: hue-rotate(90deg);
+    }
+    50% { 
+        transform: translate(-20px, 20px) rotate(180deg) scale(0.9); 
+        filter: hue-rotate(180deg);
+    }
+    75% { 
+        transform: translate(20px, 30px) rotate(270deg) scale(1.05); 
+        filter: hue-rotate(270deg);
+    }
 }
 
 /* Navigation */
@@ -37,8 +75,16 @@ nav {
     right: 0;
     z-index: 1000;
     background: rgba(10, 10, 10, 0.9);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(30px);
     border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+    transition: all 0.4s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+nav:hover {
+    background: rgba(10, 10, 10, 0.95);
+    border-bottom-color: rgba(255, 107, 53, 0.5);
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.2);
 }
 
 .nav-container {
@@ -85,171 +131,53 @@ nav {
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s ease;
+    position: relative;
+    padding: 8px 16px;
+    border-radius: 12px;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 107, 53, 0.05));
+    border-radius: 12px;
+    opacity: 0;
+    transition: all 0.4s ease;
+    transform: scale(0.8);
 }
 
 .nav-link:hover {
     color: var(--orange-primary);
-}
-
-/* Staff Login Button */
-.staff-login-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 15px 30px;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-    font-size: 1rem;
-    background: linear-gradient(135deg, var(--success), #00cc00);
-    color: white;
-    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
-}
-
-.staff-login-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 255, 0, 0.6);
 }
 
-/* Staff Info */
-.staff-info {
-    margin-top: 30px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
+.nav-link:hover::before {
+    opacity: 1;
+    transform: scale(1);
 }
 
-.staff-info p {
-    margin-bottom: 10px;
-    color: var(--text-secondary);
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--orange-primary), var(--success));
+    transition: all 0.4s ease;
+    transform: translateX(-50%);
+    border-radius: 2px;
 }
 
-.staff-info strong {
-    color: var(--orange-primary);
+.nav-link:hover::after {
+    width: 80%;
 }
 
-/* Desktop Staff Login Modal */
-.staff-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-}
-
-.staff-modal-content {
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    border: 1px solid rgba(255, 107, 53, 0.3);
-    border-radius: 20px;
-    padding: 40px;
-    max-width: 500px;
-    width: 90%;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-.staff-modal-content h3 {
-    color: var(--orange-primary);
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.staff-credentials-info {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-}
-
-.staff-credentials-info p {
-    color: var(--text-primary);
-    margin-bottom: 15px;
-    font-weight: 600;
-}
-
-.credential-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.credential-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-}
-
-.role {
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.creds {
-    color: var(--orange-primary);
-    font-family: monospace;
-    font-size: 0.9rem;
-}
-
-.staff-modal-content form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.staff-modal-content input {
-    width: 100%;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    color: var(--text-primary);
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.staff-modal-content input:focus {
-    outline: none;
-    border-color: var(--orange-primary);
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
-}
-
-.staff-modal-content button {
-    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
-    border: none;
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.staff-modal-content button[type="button"] {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.staff-modal-content button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
-}
+/* Mobile Staff Login Button */
 .mobile-staff-login {
     display: none;
     background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
@@ -269,86 +197,7 @@ nav {
     box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
 }
 
-/* Mobile Staff Login Modal */
-.mobile-staff-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(10px);
-}
-
-.mobile-modal-content {
-    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-    border: 1px solid rgba(255, 107, 53, 0.3);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 400px;
-    width: 90%;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-.mobile-modal-content h3 {
-    color: var(--orange-primary);
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.mobile-modal-content form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.mobile-modal-content input {
-    width: 100%;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    color: var(--text-primary);
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.mobile-modal-content input:focus {
-    outline: none;
-    border-color: var(--orange-primary);
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
-}
-
-.mobile-modal-content button {
-    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
-    border: none;
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.mobile-modal-content button[type="button"] {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.mobile-modal-content button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
-}
-
-/* Enhanced Hero Section */
+/* Hero Section */
 .hero {
     padding: 120px 0 80px;
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
@@ -690,6 +539,7 @@ nav {
     background: rgba(255, 107, 53, 0.2);
     border-color: var(--orange-primary);
     color: var(--orange-primary);
+    transform: translateY(-2px) scale(1.05);
 }
 
 .chat-input-wrapper {
@@ -712,6 +562,7 @@ nav {
     outline: none;
     border-color: var(--orange-primary);
     box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+    transform: scale(1.02);
 }
 
 .chat-send-btn {
@@ -729,8 +580,222 @@ nav {
 }
 
 .chat-send-btn:hover {
-    transform: scale(1.1);
+    transform: scale(1.1) rotate(15deg);
     box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}
+
+/* Staff Login Modal */
+.staff-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.staff-modal-content {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.staff-modal-content h3 {
+    color: var(--orange-primary);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.staff-credentials-info {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+}
+
+.staff-credentials-info p {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.credential-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.credential-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.role {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.creds {
+    color: var(--orange-primary);
+    font-family: monospace;
+    font-size: 0.9rem;
+    background: rgba(255, 107, 53, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.staff-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.staff-modal-content input {
+    width: 100%;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.staff-modal-content input:focus {
+    outline: none;
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.staff-modal-content button {
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    border: none;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.staff-modal-content button[type="button"] {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.staff-modal-content button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+}
+
+/* Mobile Staff Login Modal */
+.mobile-staff-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.mobile-modal-content {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.mobile-modal-content h3 {
+    color: var(--orange-primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.mobile-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mobile-modal-content input {
+    width: 100%;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.mobile-modal-content input:focus {
+    outline: none;
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.mobile-modal-content button {
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    border: none;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mobile-modal-content button[type="button"] {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobile-modal-content button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
 }
 
 /* Mobile Responsive */
@@ -755,7 +820,7 @@ nav {
         align-items: center;
     }
     
-    .chat-toggle-btn, .contact-btn {
+    .chat-toggle-btn, .contact-btn, .staff-login-btn {
         width: 100%;
         justify-content: center;
     }

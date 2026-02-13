@@ -63,8 +63,8 @@ function sendMessage() {
     const message = input.value.trim();
     const currentTime = Date.now();
     
-    // PREVENT DOUBLE MESSAGES - 1 second cooldown
-    if (message && !isSendingMessage && (currentTime - lastMessageTime) > 1000) {
+    // PREVENT DOUBLE MESSAGES - 2 second cooldown
+    if (message && !isSendingMessage && (currentTime - lastMessageTime) > 2000) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
         
@@ -84,7 +84,7 @@ function sendMessage() {
         // Reset sending flag
         setTimeout(() => {
             isSendingMessage = false;
-        }, 500);
+        }, 1000);
     }
 }
 
@@ -92,7 +92,7 @@ function sendQuickMessage(message) {
     const currentTime = Date.now();
     
     // PREVENT DOUBLE QUICK MESSAGES
-    if (!isSendingMessage && (currentTime - lastMessageTime) > 1000) {
+    if (!isSendingMessage && (currentTime - lastMessageTime) > 2000) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
         
@@ -109,7 +109,7 @@ function sendQuickMessage(message) {
         // Reset sending flag
         setTimeout(() => {
             isSendingMessage = false;
-        }, 500);
+        }, 1000);
     }
 }
 
@@ -139,8 +139,13 @@ function showStaffLogin() {
     const modal = document.getElementById('staffLoginModal');
     modal.style.display = 'flex';
     
-    // Handle form submission
-    document.getElementById('staffLoginForm').addEventListener('submit', handleStaffLogin);
+    // Clear any existing event listeners
+    const form = document.getElementById('staffLoginForm');
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    // Add fresh event listener
+    newForm.addEventListener('submit', handleStaffLogin);
 }
 
 function closeStaffLogin() {
@@ -152,8 +157,13 @@ function showMobileStaffLogin() {
     const modal = document.getElementById('mobileStaffLoginModal');
     modal.style.display = 'flex';
     
-    // Handle form submission
-    document.getElementById('mobileStaffLoginForm').addEventListener('submit', handleStaffLogin);
+    // Clear any existing event listeners
+    const form = document.getElementById('mobileStaffLoginForm');
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    // Add fresh event listener
+    newForm.addEventListener('submit', handleStaffLogin);
 }
 
 function closeMobileStaffLogin() {
@@ -164,24 +174,35 @@ function closeMobileStaffLogin() {
 function handleStaffLogin(event) {
     event.preventDefault();
     
-    const username = event.target.username.value;
-    const password = event.target.password.value;
+    const username = event.target.querySelector('input[type="text"]').value;
+    const password = event.target.querySelector('input[type="password"]').value;
     
-    // Send login request to server
-    socket.emit('staffLogin', { username, password });
+    console.log('Login attempt:', username, password);
     
-    // Handle response
-    socket.on('loginSuccess', (data) => {
-        sessionStorage.setItem('staffUser', data.user);
+    // Check credentials locally first
+    if (STAFF_CREDENTIALS[username] && STAFF_CREDENTIALS[username] === password) {
+        // Success
+        sessionStorage.setItem('staffUser', username);
         sessionStorage.setItem('staffLoggedIn', 'true');
+        
         closeStaffLogin();
+        closeMobileStaffLogin();
+        
         showNotification('Staff login successful!', 'success');
-        window.location.href = '/admin';
-    });
-    
-    socket.on('loginError', (error) => {
+        
+        // Redirect to admin panel
+        setTimeout(() => {
+            window.location.href = '/admin';
+        }, 1000);
+        
+        // Update server
+        socket.emit('staffLogin', { username, password });
+        
+    } else {
+        // Error
         showNotification('Invalid credentials', 'error');
-    });
+        console.log('Invalid credentials for:', username);
+    }
 }
 
 function checkStaffSession() {
