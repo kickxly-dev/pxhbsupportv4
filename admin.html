@@ -17,7 +17,7 @@
                 <span class="logo-badge">ADMIN</span>
             </div>
             <div class="admin-nav">
-                <button class="admin-btn" onclick="showDashboard()">
+                <button class="admin-btn active" onclick="showDashboard()">
                     <i class="fas fa-chart-line"></i>
                     Dashboard
                 </button>
@@ -40,7 +40,7 @@
         <main class="admin-main">
             <!-- Dashboard Section -->
             <section class="admin-section active" id="dashboard">
-                <h2 class="section-title">Dashboard</h2>
+                <h2 class="section-title">📊 Dashboard</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">
@@ -75,10 +75,30 @@
 
             <!-- Chats Section -->
             <section class="admin-section" id="chats">
-                <h2 class="section-title">Live Chats</h2>
+                <h2 class="section-title">💬 Live Chats</h2>
                 <div class="chat-container">
                     <div class="chat-list">
-                        <!-- Chat items will be loaded here -->
+                        <div class="chat-item" onclick="selectChat('user1')">
+                            <div class="chat-item-header">
+                                <span class="chat-user">User 1</span>
+                                <span class="chat-time">2 min ago</span>
+                            </div>
+                            <div class="chat-preview">I need help with my account...</div>
+                        </div>
+                        <div class="chat-item" onclick="selectChat('user2')">
+                            <div class="chat-item-header">
+                                <span class="chat-user">User 2</span>
+                                <span class="chat-time">5 min ago</span>
+                            </div>
+                            <div class="chat-preview">Technical issue with login...</div>
+                        </div>
+                        <div class="chat-item" onclick="selectChat('user3')">
+                            <div class="chat-item-header">
+                                <span class="chat-user">User 3</span>
+                                <span class="chat-time">10 min ago</span>
+                            </div>
+                            <div class="chat-preview">Billing question...</div>
+                        </div>
                     </div>
                     <div class="chat-window">
                         <div class="chat-messages" id="adminChatMessages">
@@ -98,7 +118,7 @@
 
             <!-- Settings Section -->
             <section class="admin-section" id="settings">
-                <h2 class="section-title">Settings</h2>
+                <h2 class="section-title">⚙️ Settings</h2>
                 <div class="settings-container">
                     <div class="setting-group">
                         <h3>General Settings</h3>
