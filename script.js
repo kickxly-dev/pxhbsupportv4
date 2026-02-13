@@ -1,6 +1,5 @@
-// P.X HB Support - Main JavaScript
+﻿// P.X HB Support - Main JavaScript
 const socket = io();
-let isChatOpen = false;
 let isSendingMessage = false;
 let lastMessageTime = 0;
 
@@ -36,27 +35,17 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Chat functions
-function toggleChat() {
-    const chatWidget = document.getElementById('chatWidget');
-    isChatOpen = !isChatOpen;
+function openChat() {
+    const panel = document.getElementById('chatPanel');
+    const input = document.getElementById('chatInput');
 
-    if (isChatOpen) {
-        chatWidget.style.display = 'flex';
-        chatWidget.classList.remove('minimized');
-    } else {
-        chatWidget.style.display = 'none';
+    if (panel && panel.scrollIntoView) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-}
 
-function minimizeChat() {
-    const chatWidget = document.getElementById('chatWidget');
-    chatWidget.classList.add('minimized');
-}
-
-function closeChat() {
-    const chatWidget = document.getElementById('chatWidget');
-    chatWidget.style.display = 'none';
-    isChatOpen = false;
+    if (input) {
+        setTimeout(() => input.focus(), 200);
+    }
 }
 
 function sendMessage() {
@@ -183,22 +172,29 @@ function handleStaffLogin(event) {
     const username = event.target.querySelector('input[type="text"]')?.value || '';
     const password = event.target.querySelector('input[type="password"]')?.value || '';
 
-    socket.once('loginSuccess', (data) => {
-        sessionStorage.setItem('staffUser', data.user);
-        sessionStorage.setItem('staffLoggedIn', 'true');
-        closeStaffLogin();
-        closeMobileStaffLogin();
-        showNotification('Staff login successful!', 'success');
-        setTimeout(() => {
-            window.location.href = '/admin';
-        }, 250);
-    });
+    fetch('/api/staff/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then((data) => {
+            sessionStorage.setItem('staffUser', data.user);
+            sessionStorage.setItem('staffLoggedIn', 'true');
+            closeStaffLogin();
+            closeMobileStaffLogin();
+            showNotification('Staff login successful!', 'success');
 
-    socket.once('loginError', () => {
-        showNotification('Invalid credentials', 'error');
-    });
+            // Socket is used for staff status broadcast only
+            socket.emit('staffLogin', { username, password });
 
-    socket.emit('staffLogin', { username, password });
+            setTimeout(() => {
+                window.location.href = '/admin';
+            }, 250);
+        })
+        .catch(() => {
+            showNotification('Invalid credentials', 'error');
+        });
 }
 
 function checkStaffSession() {
