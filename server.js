@@ -51,7 +51,7 @@ io.on('connection', (socket) => {
     // Handle new messages
     socket.on('sendMessage', (data) => {
         const message = {
-            id: Date.now(),
+            id: data.id || Date.now(),
             user: data.user,
             text: data.text,
             timestamp: new Date(),
