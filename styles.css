@@ -91,7 +91,165 @@ nav {
     color: var(--orange-primary);
 }
 
-/* Mobile Staff Login Button */
+/* Staff Login Button */
+.staff-login-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    font-size: 1rem;
+    background: linear-gradient(135deg, var(--success), #00cc00);
+    color: white;
+    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
+}
+
+.staff-login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 255, 0, 0.6);
+}
+
+/* Staff Info */
+.staff-info {
+    margin-top: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.staff-info p {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+
+.staff-info strong {
+    color: var(--orange-primary);
+}
+
+/* Desktop Staff Login Modal */
+.staff-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.staff-modal-content {
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.staff-modal-content h3 {
+    color: var(--orange-primary);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.staff-credentials-info {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+}
+
+.staff-credentials-info p {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.credential-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.credential-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+}
+
+.role {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.creds {
+    color: var(--orange-primary);
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.staff-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.staff-modal-content input {
+    width: 100%;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.staff-modal-content input:focus {
+    outline: none;
+    border-color: var(--orange-primary);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.staff-modal-content button {
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    border: none;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.staff-modal-content button[type="button"] {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.staff-modal-content button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+}
 .mobile-staff-login {
     display: none;
     background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));

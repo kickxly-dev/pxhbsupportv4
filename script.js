@@ -77,10 +77,10 @@ function sendMessage() {
         // Clear input
         input.value = '';
         
-        // Reset sending flag
+        // Reset sending flag after shorter time
         setTimeout(() => {
             isSendingMessage = false;
-        }, 1000);
+        }, 500);
     }
 }
 
@@ -98,10 +98,10 @@ function sendQuickMessage(message) {
         // Add message to UI
         addMessage(message, 'user');
         
-        // Reset sending flag
+        // Reset sending flag after shorter time
         setTimeout(() => {
             isSendingMessage = false;
-        }, 1000);
+        }, 500);
     }
 }
 
@@ -127,6 +127,19 @@ function handleKeyPress(event) {
 }
 
 // Staff login functions
+function showStaffLogin() {
+    const modal = document.getElementById('staffLoginModal');
+    modal.style.display = 'flex';
+    
+    // Handle form submission
+    document.getElementById('staffLoginForm').addEventListener('submit', handleStaffLogin);
+}
+
+function closeStaffLogin() {
+    const modal = document.getElementById('staffLoginModal');
+    modal.style.display = 'none';
+}
+
 function showMobileStaffLogin() {
     const modal = document.getElementById('mobileStaffLoginModal');
     modal.style.display = 'flex';
