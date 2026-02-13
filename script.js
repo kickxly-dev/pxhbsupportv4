@@ -2,6 +2,7 @@
 const socket = io();
 let isChatOpen = false;
 let isSendingMessage = false;
+let lastMessageTime = 0;
 
 // Staff credentials
 const STAFF_CREDENTIALS = {
@@ -60,12 +61,14 @@ function closeChat() {
 function sendMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
+    const currentTime = Date.now();
     
-    // Prevent multiple sends
-    if (message && !isSendingMessage) {
+    // Prevent multiple sends and duplicate messages
+    if (message && !isSendingMessage && (currentTime - lastMessageTime) > 1000) {
         isSendingMessage = true;
+        lastMessageTime = currentTime;
         
-        // Clear input immediately to prevent double sends
+        // Clear input immediately
         input.value = '';
         
         // Send message to server
@@ -78,16 +81,19 @@ function sendMessage() {
         // Add message to UI
         addMessage(message, 'user');
         
-        // Reset sending flag after delay
+        // Reset sending flag
         setTimeout(() => {
             isSendingMessage = false;
-        }, 1000);
+        }, 500);
     }
 }
 
 function sendQuickMessage(message) {
-    if (!isSendingMessage) {
+    const currentTime = Date.now();
+    
+    if (!isSendingMessage && (currentTime - lastMessageTime) > 1000) {
         isSendingMessage = true;
+        lastMessageTime = currentTime;
         
         // Send message to server
         socket.emit('sendMessage', {
@@ -99,10 +105,10 @@ function sendQuickMessage(message) {
         // Add message to UI
         addMessage(message, 'user');
         
-        // Reset sending flag after delay
+        // Reset sending flag
         setTimeout(() => {
             isSendingMessage = false;
-        }, 1000);
+        }, 500);
     }
 }
 
