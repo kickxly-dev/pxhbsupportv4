@@ -56,6 +56,7 @@ const STAFF_CREDENTIALS = {
 // Store chat messages and staff status
 let messages = [];
 let staffStatus = { isOnline: false, user: null };
+const staffSockets = new Set();
 
 // Real conversations (keyed by user socket id)
 const conversations = new Map();
@@ -150,6 +151,9 @@ io.on('connection', (socket) => {
     
     // Send existing messages to new user
     socket.emit('loadMessages', messages);
+
+    // Send current staff status immediately so UI is correct on first paint
+    socket.emit('staffStatusUpdate', staffStatus);
     
     // Handle new messages
     socket.on('sendMessage', (data) => {
@@ -226,6 +230,7 @@ io.on('connection', (socket) => {
     socket.on('staffLogin', (data) => {
         if (STAFF_CREDENTIALS[data.username] === data.password) {
             staffStatus = { isOnline: true, user: data.username };
+            staffSockets.add(socket.id);
             socket.emit('loginSuccess', { user: data.username });
             io.emit('staffStatusUpdate', staffStatus);
         } else {
@@ -234,7 +239,13 @@ io.on('connection', (socket) => {
     });
     
     socket.on('disconnect', () => {
-        if (!isStaff) {
+        if (isStaff) {
+            staffSockets.delete(socket.id);
+            if (staffSockets.size === 0 && staffStatus.isOnline) {
+                staffStatus = { isOnline: false, user: null };
+                io.emit('staffStatusUpdate', staffStatus);
+            }
+        } else {
             const conv = conversations.get(socket.id);
             if (conv) {
                 conv.connected = false;

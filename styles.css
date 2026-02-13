@@ -331,7 +331,7 @@ nav:hover {
     overflow: hidden;
 }
 
-.chat-toggle-btn::before, .contact-btn::before, .staff-login-btn::before {
+.chat-toggle-btn::before, .staff-login-btn::before {
     content: '';
     position: absolute;
     top: 0;
@@ -342,7 +342,7 @@ nav:hover {
     transition: left 0.5s ease;
 }
 
-.chat-toggle-btn:hover::before, .contact-btn:hover::before, .staff-login-btn:hover::before {
+.chat-toggle-btn:hover::before, .staff-login-btn:hover::before {
     left: 100%;
 }
 
@@ -355,17 +355,6 @@ nav:hover {
 .chat-toggle-btn:hover {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6);
-}
-
-.contact-btn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.contact-btn:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
 }
 
 .staff-login-btn {
