@@ -8,6 +8,17 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // Middleware
+app.use((req, res, next) => {
+    if (
+        req.path === '/' ||
+        req.path.endsWith('.html') ||
+        req.path.endsWith('.js') ||
+        req.path.endsWith('.css')
+    ) {
+        res.setHeader('Cache-Control', 'no-store');
+    }
+    next();
+});
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 
@@ -38,6 +49,13 @@ app.get('/api/stats', (req, res) => {
         activeUsers: Math.floor(Math.random() * 20) + 5,
         totalMessages: messages.length,
         staffOnline: staffStatus.isOnline ? 1 : 0
+    });
+});
+
+app.get('/version', (req, res) => {
+    res.json({
+        commit: process.env.RENDER_GIT_COMMIT || process.env.GIT_COMMIT || null,
+        time: new Date().toISOString()
     });
 });
 
