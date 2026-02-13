@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.X HB Admin Panel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-logo">
+                <span class="logo-text">P.X HB</span>
+                <span class="logo-badge">ADMIN</span>
+            </div>
+            <div class="admin-nav">
+                <button class="admin-btn" onclick="showDashboard()">
+                    <i class="fas fa-chart-line"></i>
+                    Dashboard
+                </button>
+                <button class="admin-btn" onclick="showChats()">
+                    <i class="fas fa-comments"></i>
+                    Chats
+                </button>
+                <button class="admin-btn" onclick="showSettings()">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </button>
+                <button class="admin-btn logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Dashboard Section -->
+            <section class="admin-section active" id="dashboard">
+                <h2 class="section-title">Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-value" id="activeUsers">0</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-value" id="totalMessages">0</div>
+                        <div class="stat-label">Total Messages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="stat-value" id="staffOnline">0</div>
+                        <div class="stat-label">Staff Online</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value" id="avgResponse">0s</div>
+                        <div class="stat-label">Avg Response</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chats Section -->
+            <section class="admin-section" id="chats">
+                <h2 class="section-title">Live Chats</h2>
+                <div class="chat-container">
+                    <div class="chat-list">
+                        <!-- Chat items will be loaded here -->
+                    </div>
+                    <div class="chat-window">
+                        <div class="chat-messages" id="adminChatMessages">
+                            <div class="welcome-message">
+                                <p>Select a chat to start messaging</p>
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="adminChatInput" placeholder="Type your message..." onkeypress="handleAdminKeyPress(event)">
+                            <button onclick="sendAdminMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="admin-section" id="settings">
+                <h2 class="section-title">Settings</h2>
+                <div class="settings-container">
+                    <div class="setting-group">
+                        <h3>General Settings</h3>
+                        <div class="setting-item">
+                            <label>Site Title</label>
+                            <input type="text" value="P.X HB Support">
+                        </div>
+                        <div class="setting-item">
+                            <label>Support Email</label>
+                            <input type="email" value="support@pxhb.com">
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Chat Settings</h3>
+                        <div class="setting-item">
+                            <label>Max Response Time (seconds)</label>
+                            <input type="number" value="60">
+                        </div>
+                        <div class="setting-item">
+                            <label>Auto-assign Chats</label>
+                            <input type="checkbox" checked>
+                        </div>
+                    </div>
+                    <button class="save-btn" onclick="saveSettings()">
+                        <i class="fas fa-save"></i>
+                        Save Settings
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

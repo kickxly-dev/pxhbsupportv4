@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.X HB Support</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">P.X HB</span>
+                <span class="logo-badge">SUPPORT</span>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <button class="mobile-staff-login" onclick="showMobileStaffLogin()">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Staff</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-bolt"></i>
+                <span>24/7 Live Support</span>
+            </div>
+            <h1 class="hero-title">P.X HB Support Center</h1>
+            <p class="hero-subtitle">Get instant help from our expert support team. We're here for you anytime, anywhere.</p>
+            <div class="hero-actions">
+                <button class="chat-toggle-btn" onclick="toggleChat()">
+                    <i class="fas fa-comments"></i>
+                    <span>Start Chat</span>
+                </button>
+                <button class="contact-btn">
+                    <i class="fas fa-phone"></i>
+                    <span>Call Us</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Chat Widget -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <div class="chat-status">
+                    <span class="status-dot"></span>
+                    <span>Support Team</span>
+                </div>
+                <div class="chat-actions">
+                    <button onclick="minimizeChat()" class="chat-action-btn">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button onclick="closeChat()" class="chat-action-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <div class="message-content">
+                    <p>Welcome to P.X HB Support! How can we help you today?</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="quick-actions">
+                <button onclick="sendQuickMessage('I need help with my account')" class="quick-action-btn">Account Help</button>
+                <button onclick="sendQuickMessage('I have a technical issue')" class="quick-action-btn">Technical Issue</button>
+                <button onclick="sendQuickMessage('I need billing support')" class="quick-action-btn">Billing</button>
+            </div>
+            <div class="chat-input-wrapper">
+                <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" class="chat-send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Staff Login Modal -->
+    <div class="mobile-staff-modal" id="mobileStaffLoginModal" style="display: none;">
+        <div class="mobile-modal-content">
+            <h3>Staff Login</h3>
+            <form id="mobileStaffLoginForm">
+                <input type="text" id="mobileStaffUsername" placeholder="Username" required>
+                <input type="password" id="mobileStaffPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+                <button type="button" onclick="closeMobileStaffLogin()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
