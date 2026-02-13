@@ -348,12 +348,33 @@ nav {
     box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
 }
 
-/* Hero Section */
+/* Enhanced Hero Section */
 .hero {
     padding: 120px 0 80px;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
     position: relative;
     overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(0, 255, 0, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 153, 0, 0.15) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: heroGlow 15s ease-in-out infinite alternate;
+}
+
+@keyframes heroGlow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.1); }
 }
 
 .hero-content {
@@ -377,16 +398,39 @@ nav {
     color: var(--orange-primary);
     margin-bottom: 30px;
     backdrop-filter: blur(10px);
+    animation: badgePulse 3s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { 
+        transform: scale(1); 
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+    50% { 
+        transform: scale(1.05); 
+        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+    }
 }
 
 .hero-title {
     font-size: 4rem;
     font-weight: 900;
     margin-bottom: 20px;
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--orange-primary) 100%);
+    background: linear-gradient(135deg, 
+        var(--text-primary) 0%, 
+        var(--orange-primary) 30%, 
+        var(--success) 60%, 
+        var(--orange-primary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: textShimmer 4s ease-in-out infinite;
+    background-size: 200% 100%;
+}
+
+@keyframes textShimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 .hero-subtitle {
@@ -394,6 +438,7 @@ nav {
     color: var(--text-secondary);
     margin-bottom: 40px;
     line-height: 1.6;
+    opacity: 0.9;
 }
 
 .hero-actions {
@@ -401,9 +446,10 @@ nav {
     gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
+    margin-bottom: 30px;
 }
 
-.chat-toggle-btn, .contact-btn {
+.chat-toggle-btn, .contact-btn, .staff-login-btn {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -411,9 +457,26 @@ nav {
     border-radius: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
     border: none;
     font-size: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-toggle-btn::before, .contact-btn::before, .staff-login-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.chat-toggle-btn:hover::before, .contact-btn:hover::before, .staff-login-btn:hover::before {
+    left: 100%;
 }
 
 .chat-toggle-btn {
@@ -423,19 +486,49 @@ nav {
 }
 
 .chat-toggle-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.6);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6);
 }
 
 .contact-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .contact-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+}
+
+.staff-login-btn {
+    background: linear-gradient(135deg, var(--success), #00cc00);
+    color: white;
+    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.4);
+}
+
+.staff-login-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 30px rgba(0, 255, 0, 0.6);
+}
+
+.staff-info {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.staff-info p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.staff-info strong {
+    color: var(--orange-primary);
 }
 
 /* Chat Widget */

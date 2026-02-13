@@ -61,8 +61,12 @@ function sendMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     
+    // Prevent multiple sends
     if (message && !isSendingMessage) {
         isSendingMessage = true;
+        
+        // Clear input immediately to prevent double sends
+        input.value = '';
         
         // Send message to server
         socket.emit('sendMessage', {
@@ -74,13 +78,10 @@ function sendMessage() {
         // Add message to UI
         addMessage(message, 'user');
         
-        // Clear input
-        input.value = '';
-        
-        // Reset sending flag after shorter time
+        // Reset sending flag after delay
         setTimeout(() => {
             isSendingMessage = false;
-        }, 500);
+        }, 1000);
     }
 }
 
@@ -98,10 +99,10 @@ function sendQuickMessage(message) {
         // Add message to UI
         addMessage(message, 'user');
         
-        // Reset sending flag after shorter time
+        // Reset sending flag after delay
         setTimeout(() => {
             isSendingMessage = false;
-        }, 500);
+        }, 1000);
     }
 }
 
