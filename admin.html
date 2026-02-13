@@ -77,29 +77,7 @@
             <section class="admin-section" id="chats">
                 <h2 class="section-title">💬 Live Chats</h2>
                 <div class="chat-container">
-                    <div class="chat-list">
-                        <div class="chat-item" onclick="selectChat('user1')">
-                            <div class="chat-item-header">
-                                <span class="chat-user">User 1</span>
-                                <span class="chat-time">2 min ago</span>
-                            </div>
-                            <div class="chat-preview">I need help with my account...</div>
-                        </div>
-                        <div class="chat-item" onclick="selectChat('user2')">
-                            <div class="chat-item-header">
-                                <span class="chat-user">User 2</span>
-                                <span class="chat-time">5 min ago</span>
-                            </div>
-                            <div class="chat-preview">Technical issue with login...</div>
-                        </div>
-                        <div class="chat-item" onclick="selectChat('user3')">
-                            <div class="chat-item-header">
-                                <span class="chat-user">User 3</span>
-                                <span class="chat-time">10 min ago</span>
-                            </div>
-                            <div class="chat-preview">Billing question...</div>
-                        </div>
-                    </div>
+                    <div class="chat-list" id="adminChatList"></div>
                     <div class="chat-window">
                         <div class="chat-messages" id="adminChatMessages">
                             <div class="welcome-message">

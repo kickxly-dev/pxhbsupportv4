@@ -15,6 +15,22 @@
     --warning: #ffff00;
 }
 
+/* Embedded support layout */
+.support-layout {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 22px;
+    align-items: start;
+}
+
+.support-left {
+    text-align: left;
+}
+
+.support-right {
+    position: relative;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -45,7 +61,8 @@ body::before {
         radial-gradient(circle at 60% 30%, rgba(0, 204, 255, 0.1) 0%, transparent 50%);
     pointer-events: none;
     z-index: -1;
-    animation: particleFloat 25s ease-in-out infinite;
+    opacity: 0.45;
+    animation: particleFloat 40s ease-in-out infinite;
 }
 
 @keyframes particleFloat {
@@ -227,8 +244,9 @@ nav:hover {
 }
 
 .hero-content {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
+    padding: 0 30px;
     text-align: center;
     position: relative;
     z-index: 1;
@@ -292,13 +310,13 @@ nav:hover {
 
 .hero-actions {
     display: flex;
-    gap: 20px;
-    justify-content: center;
+    gap: 14px;
+    justify-content: flex-start;
     flex-wrap: wrap;
-    margin-bottom: 30px;
+    margin-bottom: 18px;
 }
 
-.chat-toggle-btn, .contact-btn, .staff-login-btn {
+.chat-toggle-btn, .staff-login-btn {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -382,23 +400,20 @@ nav:hover {
 
 /* Chat Widget */
 .chat-widget {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 380px;
-    height: 500px;
+    width: 100%;
+    height: 520px;
     background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
     border: 1px solid rgba(255, 107, 53, 0.3);
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    display: none;
+    display: flex;
     flex-direction: column;
-    z-index: 1000;
+    z-index: 1;
     backdrop-filter: blur(20px);
 }
 
-.chat-widget.minimized {
-    height: 60px;
+.chat-widget.embedded {
+    position: relative;
 }
 
 .chat-header {
@@ -804,11 +819,8 @@ nav:hover {
         display: flex;
     }
     
-    .chat-widget {
-        width: calc(100% - 20px);
-        right: 10px;
-        left: 10px;
-        bottom: 10px;
+    .support-layout {
+        grid-template-columns: 1fr;
     }
     
     .hero-title {
@@ -820,7 +832,7 @@ nav:hover {
         align-items: center;
     }
     
-    .chat-toggle-btn, .contact-btn, .staff-login-btn {
+    .chat-toggle-btn, .staff-login-btn {
         width: 100%;
         justify-content: center;
     }
