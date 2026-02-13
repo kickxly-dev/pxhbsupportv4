@@ -4,86 +4,71 @@ let currentSection = 'dashboard';
 let selectedChat = null;
 
 // Initialize admin panel
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('P.X HB Admin Panel initialized');
-    
-    // Check authentication
+document.addEventListener('DOMContentLoaded', function () {
     checkAuth();
-    
-    // Load dashboard data
     loadDashboardData();
-    
-    // Handle socket events
     setupSocketEvents();
 });
 
 function checkAuth() {
     const staffUser = sessionStorage.getItem('staffUser');
     const staffLoggedIn = sessionStorage.getItem('staffLoggedIn');
-    
+
     if (!staffUser || staffLoggedIn !== 'true') {
         window.location.href = '/';
     }
 }
 
 function setupSocketEvents() {
-    // Listen for new messages
-    socket.on('newMessage', (message) => {
+    socket.on('newMessage', () => {
         if (currentSection === 'chats') {
             updateChatList();
         }
         updateStats();
     });
-    
-    // Listen for staff status updates
-    socket.on('staffStatusUpdate', (status) => {
-        updateStaffStatus(status);
-    });
 }
 
 // Navigation functions
-function showDashboard() {
-    switchSection('dashboard');
+function showDashboard(btn) {
+    switchSection('dashboard', btn);
     loadDashboardData();
 }
 
-function showChats() {
-    switchSection('chats');
+function showChats(btn) {
+    switchSection('chats', btn);
     loadChatList();
 }
 
-function showSettings() {
-    switchSection('settings');
+function showSettings(btn) {
+    switchSection('settings', btn);
 }
 
-function switchSection(sectionId) {
-    // Hide all sections
-    document.querySelectorAll('.admin-section').forEach(section => {
+function switchSection(sectionId, btn) {
+    document.querySelectorAll('.admin-section').forEach((section) => {
         section.classList.remove('active');
     });
-    
-    // Show selected section
-    document.getElementById(sectionId).classList.add('active');
+
+    const section = document.getElementById(sectionId);
+    if (section) section.classList.add('active');
     currentSection = sectionId;
-    
-    // Update active button
-    document.querySelectorAll('.admin-btn').forEach(btn => {
-        btn.classList.remove('active');
+
+    document.querySelectorAll('.admin-btn').forEach((b) => {
+        b.classList.remove('active');
     });
-    event.target.classList.add('active');
+
+    if (btn && btn.classList) {
+        btn.classList.add('active');
+    }
 }
 
 // Dashboard functions
 function loadDashboardData() {
-    // Fetch stats from API
     fetch('/api/stats')
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
             updateStatsDisplay(data);
         })
-        .catch(error => {
-            console.error('Error loading stats:', error);
-            // Use mock data for demo
+        .catch(() => {
             updateStatsDisplay({
                 activeUsers: Math.floor(Math.random() * 50) + 10,
                 totalMessages: Math.floor(Math.random() * 200) + 50,
@@ -94,41 +79,42 @@ function loadDashboardData() {
 }
 
 function updateStatsDisplay(stats) {
-    document.getElementById('activeUsers').textContent = stats.activeUsers;
-    document.getElementById('totalMessages').textContent = stats.totalMessages;
-    document.getElementById('staffOnline').textContent = stats.staffOnline;
-    document.getElementById('avgResponse').textContent = stats.avgResponse + 's';
+    const au = document.getElementById('activeUsers');
+    const tm = document.getElementById('totalMessages');
+    const so = document.getElementById('staffOnline');
+    const ar = document.getElementById('avgResponse');
+
+    if (au) au.textContent = stats.activeUsers;
+    if (tm) tm.textContent = stats.totalMessages;
+    if (so) so.textContent = stats.staffOnline;
+    if (ar) ar.textContent = `${stats.avgResponse || 0}s`;
 }
 
 function updateStats() {
     loadDashboardData();
 }
 
-function updateStaffStatus(status) {
-    // Update staff status display
-    console.log('Staff status updated:', status);
-}
-
-// Chat functions
+// Chat functions (demo UI)
 function loadChatList() {
-    // Simulate loading chat list
     const chatList = document.querySelector('.chat-list');
+    if (!chatList) return;
+
     chatList.innerHTML = `
-        <div class="chat-item" onclick="selectChat('user1')">
+        <div class="chat-item" onclick="selectChat('user1', this)">
             <div class="chat-item-header">
                 <span class="chat-user">User 1</span>
                 <span class="chat-time">2 min ago</span>
             </div>
             <div class="chat-preview">I need help with my account...</div>
         </div>
-        <div class="chat-item" onclick="selectChat('user2')">
+        <div class="chat-item" onclick="selectChat('user2', this)">
             <div class="chat-item-header">
                 <span class="chat-user">User 2</span>
                 <span class="chat-time">5 min ago</span>
             </div>
             <div class="chat-preview">Technical issue with login...</div>
         </div>
-        <div class="chat-item" onclick="selectChat('user3')">
+        <div class="chat-item" onclick="selectChat('user3', this)">
             <div class="chat-item-header">
                 <span class="chat-user">User 3</span>
                 <span class="chat-time">10 min ago</span>
@@ -138,62 +124,47 @@ function loadChatList() {
     `;
 }
 
-function selectChat(userId) {
+function selectChat(userId, el) {
     selectedChat = userId;
-    
-    // Update chat window
+
+    document.querySelectorAll('.chat-item').forEach((item) => item.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+
     const chatMessages = document.getElementById('adminChatMessages');
+    if (!chatMessages) return;
+
     chatMessages.innerHTML = `
         <div class="message user">
-            <div class="message-content">
-                <p>Hello, I need help with my account</p>
-            </div>
+            <div class="message-content"><p>Hello, I need help with my account</p></div>
         </div>
         <div class="message staff">
-            <div class="message-content">
-                <p>Hello! I'm here to help. What seems to be the issue?</p>
-            </div>
+            <div class="message-content"><p>Hello! I'm here to help. What seems to be the issue?</p></div>
         </div>
     `;
-    
-    // Highlight selected chat
-    document.querySelectorAll('.chat-item').forEach(item => {
-        item.classList.remove('selected');
-    });
-    event.target.closest('.chat-item').classList.add('selected');
 }
 
 function sendAdminMessage() {
     const input = document.getElementById('adminChatInput');
-    const message = input.value.trim();
-    
-    if (message && selectedChat) {
-        // Send message to user
-        socket.emit('sendMessage', {
-            text: message,
-            user: sessionStorage.getItem('staffUser'),
-            type: 'staff'
-        });
-        
-        // Add message to chat window
-        addAdminMessage(message, 'staff');
-        
-        // Clear input
-        input.value = '';
-    }
+    const message = (input?.value || '').trim();
+    if (!message || !selectedChat) return;
+
+    socket.emit('sendMessage', {
+        text: message,
+        user: sessionStorage.getItem('staffUser') || 'Staff',
+        type: 'staff'
+    });
+
+    addAdminMessage(message, 'staff');
+    if (input) input.value = '';
 }
 
 function addAdminMessage(text, type) {
     const chatMessages = document.getElementById('adminChatMessages');
+    if (!chatMessages) return;
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
-    
-    messageDiv.innerHTML = `
-        <div class="message-content">
-            <p>${text}</p>
-        </div>
-    `;
-    
+    messageDiv.innerHTML = `<div class="message-content"><p>${escapeHtml(String(text))}</p></div>`;
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -210,50 +181,17 @@ function updateChatList() {
     }
 }
 
-// Settings functions
-function saveSettings() {
-    showNotification('Settings saved successfully!', 'success');
-}
-
-// Utility functions
 function logout() {
     sessionStorage.removeItem('staffUser');
     sessionStorage.removeItem('staffLoggedIn');
     window.location.href = '/';
 }
 
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${getNotificationIcon(type)}"></i>
-        <span>${message}</span>
-    `;
-    
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--warning)'};
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-function getNotificationIcon(type) {
-    switch(type) {
-        case 'success': return 'check-circle';
-        case 'error': return 'exclamation-circle';
-        case 'warning': return 'exclamation-triangle';
-        default: return 'info-circle';
-    }
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
