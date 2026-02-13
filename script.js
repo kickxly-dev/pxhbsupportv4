@@ -63,7 +63,7 @@ function sendMessage() {
     const message = input.value.trim();
     const currentTime = Date.now();
     
-    // Prevent multiple sends and duplicate messages
+    // PREVENT DOUBLE MESSAGES - 1 second cooldown
     if (message && !isSendingMessage && (currentTime - lastMessageTime) > 1000) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -91,6 +91,7 @@ function sendMessage() {
 function sendQuickMessage(message) {
     const currentTime = Date.now();
     
+    // PREVENT DOUBLE QUICK MESSAGES
     if (!isSendingMessage && (currentTime - lastMessageTime) > 1000) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -163,8 +164,8 @@ function closeMobileStaffLogin() {
 function handleStaffLogin(event) {
     event.preventDefault();
     
-    const username = document.getElementById('mobileStaffUsername').value;
-    const password = document.getElementById('mobileStaffPassword').value;
+    const username = event.target.username.value;
+    const password = event.target.password.value;
     
     // Send login request to server
     socket.emit('staffLogin', { username, password });
@@ -173,7 +174,7 @@ function handleStaffLogin(event) {
     socket.on('loginSuccess', (data) => {
         sessionStorage.setItem('staffUser', data.user);
         sessionStorage.setItem('staffLoggedIn', 'true');
-        closeMobileStaffLogin();
+        closeStaffLogin();
         showNotification('Staff login successful!', 'success');
         window.location.href = '/admin';
     });
@@ -195,7 +196,6 @@ function checkStaffSession() {
 function updateStaffUI() {
     const staffUser = sessionStorage.getItem('staffUser');
     if (staffUser) {
-        // Update UI to show staff is logged in
         console.log('Staff logged in:', staffUser);
     }
 }
