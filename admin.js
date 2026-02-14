@@ -13,6 +13,8 @@ const CANNED_RESPONSES = {
     '3': 'We’re on it. Typical response time is a few minutes — thanks for your patience.'
 };
 
+let lastSmartReplies = [];
+
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function () {
     checkAuth();
@@ -117,6 +119,20 @@ function handleAdminHotkeys(event) {
             if (!selectedChat) return;
             event.preventDefault();
             exportTranscript(selectedChat, { mode: 'copy' });
+            return;
+        }
+
+        if (key === '1' || key === '2' || key === '3') {
+            const idx = Number(key) - 1;
+            const suggestion = lastSmartReplies && lastSmartReplies[idx];
+            if (!suggestion) return;
+            event.preventDefault();
+            const input = document.getElementById('adminChatInput');
+            if (input) {
+                input.value = input.value ? `${input.value} ${suggestion}` : String(suggestion);
+                input.focus();
+                emitAdminTyping(true);
+            }
             return;
         }
     }
@@ -224,6 +240,17 @@ function sendAdminMessage() {
     const message = (input?.value || '').trim();
     if (!message || !selectedChat) return;
 
+    const conv = conversationsById.get(selectedChat);
+    const me = sessionStorage.getItem('staffUser');
+    if (conv?.claimedBy && me && String(conv.claimedBy) !== String(me)) {
+        console.warn('Ticket is claimed by another staff member:', conv.claimedBy);
+        return;
+    }
+    if (!conv?.claimedBy) {
+        console.warn('Ticket is unclaimed. Use /claim first.');
+        return;
+    }
+
     if (message.startsWith('/')) {
         const handled = handleSlashCommand(message);
         if (handled) {
@@ -277,6 +304,31 @@ function handleSlashCommand(raw) {
         return true;
     }
 
+    if (cmd === 'claim') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'claim' });
+        return true;
+    }
+
+    if (cmd === 'unclaim') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unclaim' });
+        return true;
+    }
+
+    if (cmd === 'verify') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'verify' });
+        return true;
+    }
+
+    if (cmd === 'unverify') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unverify' });
+        return true;
+    }
+
+    if (cmd === 'smart') {
+        fetchSmartReplies(selectedChat);
+        return true;
+    }
+
     if (cmd === 'tag') {
         const sub = String(tokens[0] || '').toLowerCase();
         const tag = String(tokens.slice(1).join(' ') || '').trim();
@@ -305,6 +357,20 @@ function handleSlashCommand(raw) {
     }
 
     return false;
+}
+
+async function fetchSmartReplies(socketId) {
+    try {
+        if (!socketId) return;
+        const res = await fetch(`/api/admin/smart-replies/${encodeURIComponent(String(socketId))}`);
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        const list = Array.isArray(data?.replies) ? data.replies : [];
+        lastSmartReplies = list.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 3);
+        console.log('Smart replies:', lastSmartReplies);
+    } catch (err) {
+        console.warn('Smart replies failed', err);
+    }
 }
 
 function buildTranscriptText(data) {
@@ -400,13 +466,25 @@ function renderChatList(list) {
             const preview = escapeHtml(String(c.lastText || ''));
             const name = escapeHtml(String(c.name || c.socketId));
             const unread = Number(c.unread || 0);
-            const right = unread > 0 ? `${unread}` : escapeHtml(timeText);
+
+            const claimedBy = c.claimedBy ? escapeHtml(String(c.claimedBy)) : '';
+            const isVerified = Boolean(c.verified);
+            const badges = [
+                isVerified ? '<span class="ticket-badge verified">VERIFIED</span>' : '',
+                claimedBy
+                    ? `<span class="ticket-badge claimed">CLAIMED: ${claimedBy}</span>`
+                    : '<span class="ticket-badge unclaimed">UNCLAIMED</span>'
+            ]
+                .filter(Boolean)
+                .join('');
+
+            const right = unread > 0 ? `<span class="chat-time">${unread}</span>` : `<span class="chat-time">${escapeHtml(timeText)}</span>`;
 
             return `
         <div class="chat-item" data-socket-id="${escapeHtml(String(c.socketId))}" onclick="selectChat('${escapeHtml(String(c.socketId))}', this)">
             <div class="chat-item-header">
                 <span class="chat-user">${name}${c.connected ? '' : ' (disconnected)'}</span>
-                <span class="chat-time">${right}</span>
+                <span class="ticket-badges">${badges}${right}</span>
             </div>
             <div class="chat-preview">${preview}</div>
         </div>`;

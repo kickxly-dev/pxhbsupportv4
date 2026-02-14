@@ -985,6 +985,127 @@ nav:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
+.username-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(16px) saturate(180%);
+}
+
+.username-modal-content {
+    background: var(--panel);
+    border: 1px solid rgba(255, 106, 0, 0.25);
+    border-radius: 24px;
+    padding: 42px;
+    max-width: 520px;
+    width: 92%;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 106, 0, 0.1);
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.username-modal-content h3 {
+    color: var(--orange-glow);
+    font-size: 1.65rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.username-modal-content p {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.username-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.username-modal-content input {
+    width: 100%;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+}
+
+.username-modal-content input:focus {
+    outline: none;
+    border-color: rgba(255, 106, 0, 0.4);
+    box-shadow: 0 0 0 3px var(--ring);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.username-modal-content button {
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    border: none;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.3);
+}
+
+.username-modal-content button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.45);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
+}
+
+.ticket-badges {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ticket-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+}
+
+.ticket-badge.verified {
+    border-color: rgba(0, 255, 153, 0.25);
+    color: rgba(0, 255, 153, 0.95);
+    background: rgba(0, 255, 153, 0.08);
+}
+
+.ticket-badge.claimed {
+    border-color: rgba(255, 106, 0, 0.28);
+    color: var(--orange-glow);
+    background: rgba(255, 106, 0, 0.10);
+}
+
+.ticket-badge.unclaimed {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.06);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .mobile-staff-login {

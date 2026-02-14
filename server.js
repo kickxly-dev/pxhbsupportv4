@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
@@ -150,6 +151,8 @@ function getConversationSummary(socketId) {
         socketId,
         name: conv.name,
         connected: conv.connected,
+        claimedBy: conv.claimedBy || null,
+        verified: Boolean(conv.verified),
         tags: Array.isArray(conv.tags) ? conv.tags : [],
         notes: conv.notes || '',
         mutedUntil: conv.mutedUntil || null,
@@ -195,6 +198,103 @@ app.get('/api/admin/transcript/:socketId', (req, res) => {
     const conv = conversations.get(socketId);
     if (!conv) return res.status(404).json({ error: 'not_found' });
     return res.json({ socketId, name: conv.name, messages: conv.messages || [] });
+});
+
+function openAiChatCompletion({ apiKey, messages }) {
+    return new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+            messages,
+            temperature: 0.4
+        });
+
+        const req = https.request(
+            {
+                method: 'POST',
+                hostname: 'api.openai.com',
+                path: '/v1/chat/completions',
+                headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body)
+                }
+            },
+            (resp) => {
+                let raw = '';
+                resp.setEncoding('utf8');
+                resp.on('data', (chunk) => {
+                    raw += chunk;
+                });
+                resp.on('end', () => {
+                    try {
+                        if (resp.statusCode && resp.statusCode >= 400) {
+                            return reject(new Error(`openai_http_${resp.statusCode}`));
+                        }
+                        const json = JSON.parse(raw || '{}');
+                        const text = json?.choices?.[0]?.message?.content;
+                        resolve(String(text || ''));
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+        );
+
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
+}
+
+function buildSmartRepliesFallback(conv) {
+    const lastUser = (conv?.messages || []).slice().reverse().find((m) => (m?.type || '').toLowerCase() === 'user');
+    const snippet = lastUser?.text ? String(lastUser.text).slice(0, 120) : '';
+    return [
+        `Thanks for reaching out${conv?.name ? `, ${conv.name}` : ''}. Can you share a bit more detail?`,
+        `Got it${snippet ? ` — "${snippet}"` : ''}. What device/browser are you using?`,
+        `I’m looking into this now. If you have a screenshot, please send it.`
+    ];
+}
+
+app.get('/api/admin/smart-replies/:socketId', async (req, res) => {
+    if (!isStaffFromCookieHeader(req.headers.cookie)) {
+        return res.status(401).json({ error: 'unauthorized' });
+    }
+
+    const socketId = String(req.params.socketId || '').trim();
+    if (!socketId) return res.status(400).json({ error: 'missing socketId' });
+    const conv = conversations.get(socketId);
+    if (!conv) return res.status(404).json({ error: 'not_found' });
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        return res.json({ replies: buildSmartRepliesFallback(conv), source: 'fallback' });
+    }
+
+    try {
+        const history = (conv.messages || []).slice(-12).map((m) => {
+            const role = (m?.type || '').toLowerCase() === 'staff' ? 'assistant' : 'user';
+            return { role, content: safeText(m?.text, 500) };
+        });
+        const system = {
+            role: 'system',
+            content:
+                'You are a concise support agent. Generate exactly 3 short reply options. Return them as a JSON array of strings only.'
+        };
+        const content = await openAiChatCompletion({ apiKey, messages: [system, ...history] });
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch {
+            parsed = null;
+        }
+        const replies = Array.isArray(parsed) ? parsed : buildSmartRepliesFallback(conv);
+        const cleaned = replies.map((r) => safeText(r, 220)).filter(Boolean).slice(0, 3);
+        return res.json({ replies: cleaned, source: Array.isArray(parsed) ? 'openai' : 'fallback' });
+    } catch (err) {
+        console.warn('smart replies failed', err);
+        return res.json({ replies: buildSmartRepliesFallback(conv), source: 'fallback' });
+    }
 });
 
 // API endpoints
@@ -254,6 +354,8 @@ io.on('connection', (socket) => {
             name: `User ${socket.id.slice(0, 6)}`,
             connected: true,
             unread: 0,
+            claimedBy: null,
+            verified: false,
             messages: [],
             tags: [],
             notes: '',
@@ -422,6 +524,9 @@ io.on('connection', (socket) => {
         const conv = conversations.get(socketId);
         if (!conv) return;
         if (conv.banned) return;
+        if (!conv.claimedBy || conv.claimedBy !== staffStatus.user) {
+            return;
+        }
 
         const message = {
             id: Date.now(),
@@ -483,6 +588,26 @@ io.on('connection', (socket) => {
             conv.banned = false;
         } else if (act === 'disconnect') {
             io.to(socketId).disconnectSockets(true);
+        } else if (act === 'claim') {
+            if (!conv.claimedBy) {
+                conv.claimedBy = staffStatus.user || 'Staff';
+            }
+        } else if (act === 'unclaim') {
+            if (conv.claimedBy === (staffStatus.user || 'Staff')) {
+                conv.claimedBy = null;
+            }
+        } else if (act === 'verify') {
+            conv.verified = true;
+            io.to(socketId).emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Your chat has been verified by staff.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId
+            });
+        } else if (act === 'unverify') {
+            conv.verified = false;
         } else {
             return;
         }
