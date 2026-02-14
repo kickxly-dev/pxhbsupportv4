@@ -221,10 +221,87 @@ function sendAdminMessage() {
     const message = (input?.value || '').trim();
     if (!message || !selectedChat) return;
 
+    if (message.startsWith('/')) {
+        const handled = handleSlashCommand(message);
+        if (handled) {
+            if (input) input.value = '';
+            emitAdminTyping(false);
+            return;
+        }
+    }
+
     socket.emit('adminSendMessage', { socketId: selectedChat, text: message });
     if (input) input.value = '';
 
     emitAdminTyping(false);
+}
+
+function handleSlashCommand(raw) {
+    const line = String(raw || '').trim();
+    if (!line.startsWith('/')) return false;
+    if (!selectedChat) return false;
+
+    const tokens = line.slice(1).split(/\s+/).filter(Boolean);
+    const cmd = String(tokens.shift() || '').toLowerCase();
+    const rest = tokens.join(' ');
+
+    if (!cmd) return false;
+
+    if (cmd === 'mute') {
+        const minutes = Number(tokens[0] || 0);
+        const ms = Math.max(0, Math.min(Number.isFinite(minutes) ? minutes : 0, 60 * 24 * 7)) * 60 * 1000;
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'mute', durationMs: ms });
+        return true;
+    }
+
+    if (cmd === 'unmute') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unmute' });
+        return true;
+    }
+
+    if (cmd === 'ban') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'ban' });
+        return true;
+    }
+
+    if (cmd === 'unban') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unban' });
+        return true;
+    }
+
+    if (cmd === 'close') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'disconnect' });
+        return true;
+    }
+
+    if (cmd === 'tag') {
+        const sub = String(tokens[0] || '').toLowerCase();
+        const tag = String(tokens.slice(1).join(' ') || '').trim();
+        const conv = conversationsById.get(selectedChat);
+        const current = Array.isArray(conv?.tags) ? conv.tags.map((t) => String(t)) : [];
+        let next = current.slice();
+
+        if (sub === 'add' && tag) {
+            if (!next.includes(tag)) next.push(tag);
+        } else if ((sub === 'remove' || sub === 'rm' || sub === 'del') && tag) {
+            next = next.filter((t) => t !== tag);
+        } else {
+            return false;
+        }
+
+        socket.emit('adminUpdateConversation', { socketId: selectedChat, tags: next, notes: conv?.notes || '' });
+        return true;
+    }
+
+    if (cmd === 'note') {
+        const conv = conversationsById.get(selectedChat);
+        const existing = conv?.notes ? String(conv.notes) : '';
+        const next = existing ? `${existing}\n${rest}` : rest;
+        socket.emit('adminUpdateConversation', { socketId: selectedChat, tags: conv?.tags || [], notes: next });
+        return true;
+    }
+
+    return false;
 }
 
 function buildTranscriptText(data) {

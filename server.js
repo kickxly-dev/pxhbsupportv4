@@ -20,6 +20,19 @@ function parseCookies(cookieHeader) {
     return out;
 }
 
+const MAX_MESSAGE_TEXT = 1000;
+const MAX_NAME_LEN = 40;
+
+function safeText(input, maxLen) {
+    const s = String(input == null ? '' : input);
+    return s.trim().slice(0, maxLen);
+}
+
+function safeUserLabel(input) {
+    const s = safeText(input, MAX_NAME_LEN);
+    return s || 'User';
+}
+
 function isStaffFromCookieHeader(cookieHeader) {
     const cookies = parseCookies(cookieHeader);
     return cookies.pxhb_staff === '1';
@@ -63,7 +76,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.static(path.join(__dirname)));
-app.use(express.json());
+app.use(express.json({ limit: '20kb' }));
 
 // Staff credentials
 function loadStaffCredentials() {
@@ -263,6 +276,10 @@ io.on('connection', (socket) => {
     socket.on('sendMessage', (data) => {
         if (isStaff) return;
 
+        const now = Date.now();
+        if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 400) return;
+        socket.data.lastMsgAt = now;
+
         const conv = conversations.get(socket.id);
         if (conv?.banned) {
             socket.emit('newMessage', {
@@ -287,15 +304,13 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // server-side spam limit per socket
-        const now = Date.now();
-        if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 400) return;
-        socket.data.lastMsgAt = now;
+        const text = safeText(data && data.text, MAX_MESSAGE_TEXT);
+        if (!text) return;
 
         const message = {
-            id: data.id || Date.now(),
-            user: data.user,
-            text: data.text,
+            id: (data && data.id) || Date.now(),
+            user: safeUserLabel(data && data.user),
+            text,
             timestamp: new Date(),
             type: data.type || 'user',
             socketId: socket.id
@@ -323,6 +338,9 @@ io.on('connection', (socket) => {
 
     socket.on('userTyping', (payload) => {
         if (isStaff) return;
+        const now = Date.now();
+        if (socket.data.lastTypingAt && now - socket.data.lastTypingAt < 120) return;
+        socket.data.lastTypingAt = now;
         const isTyping = Boolean(payload && payload.isTyping);
         io.to('admins').emit('userTyping', {
             socketId: socket.id,
@@ -333,8 +351,13 @@ io.on('connection', (socket) => {
 
     socket.on('staffTyping', (payload) => {
         if (!isStaff) return;
+        const now = Date.now();
+        if (socket.data.lastStaffTypingAt && now - socket.data.lastStaffTypingAt < 120) return;
+        socket.data.lastStaffTypingAt = now;
+
         const socketId = payload && payload.socketId;
         if (!socketId) return;
+        if (!conversations.has(socketId)) return;
         const isTyping = Boolean(payload && payload.isTyping);
         io.to(socketId).emit('staffTyping', {
             socketId,
@@ -353,6 +376,7 @@ io.on('connection', (socket) => {
     // Admin: select conversation
     socket.on('adminSelectConversation', ({ socketId }) => {
         if (!isStaff) return;
+        if (!socketId || !conversations.has(socketId)) return;
         const conv = conversations.get(socketId);
         if (!conv) return;
         conv.unread = 0;
@@ -378,8 +402,13 @@ io.on('connection', (socket) => {
     // Admin: send message to a user
     socket.on('adminSendMessage', ({ socketId, text }) => {
         if (!isStaff) return;
-        const msgText = String(text || '').trim();
+        const now = Date.now();
+        if (socket.data.lastAdminMsgAt && now - socket.data.lastAdminMsgAt < 250) return;
+        socket.data.lastAdminMsgAt = now;
+
+        const msgText = safeText(text, MAX_MESSAGE_TEXT);
         if (!socketId || !msgText) return;
+        if (!conversations.has(socketId)) return;
         const conv = conversations.get(socketId);
         if (!conv) return;
         if (conv.banned) return;
@@ -407,6 +436,7 @@ io.on('connection', (socket) => {
     socket.on('adminUpdateConversation', ({ socketId, tags, notes }) => {
         if (!isStaff) return;
         if (!socketId) return;
+        if (!conversations.has(socketId)) return;
         const conv = conversations.get(socketId);
         if (!conv) return;
 
@@ -425,6 +455,7 @@ io.on('connection', (socket) => {
     socket.on('adminModerationAction', ({ socketId, action, durationMs }) => {
         if (!isStaff) return;
         if (!socketId) return;
+        if (!conversations.has(socketId)) return;
         const conv = conversations.get(socketId);
         if (!conv) return;
 
@@ -440,6 +471,8 @@ io.on('connection', (socket) => {
             io.to(socketId).disconnectSockets(true);
         } else if (act === 'unban') {
             conv.banned = false;
+        } else if (act === 'disconnect') {
+            io.to(socketId).disconnectSockets(true);
         } else {
             return;
         }
