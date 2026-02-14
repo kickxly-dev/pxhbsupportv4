@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +25,46 @@ const MAX_MESSAGE_TEXT = 1000;
 const MAX_NAME_LEN = 40;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_DATA_URL_LEN = 8_500_000;
+
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
+
+function discordPost(payload) {
+    if (!DISCORD_WEBHOOK_URL) return;
+    try {
+        const url = new URL(DISCORD_WEBHOOK_URL);
+        const body = Buffer.from(JSON.stringify(payload || {}));
+
+        const req = https.request(
+            {
+                method: 'POST',
+                hostname: url.hostname,
+                path: `${url.pathname}${url.search || ''}`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': body.length
+                },
+                timeout: 2500
+            },
+            (res) => {
+                res.on('data', () => {});
+                res.on('end', () => {});
+            }
+        );
+
+        req.on('timeout', () => req.destroy());
+        req.on('error', () => {});
+        req.write(body);
+        req.end();
+    } catch {
+        // ignore
+    }
+}
+
+function discordNotify(title, lines) {
+    if (!DISCORD_WEBHOOK_URL) return;
+    const content = [title, ...(Array.isArray(lines) ? lines : [])].filter(Boolean).join('\n');
+    discordPost({ content: String(content).slice(0, 1900) });
+}
 
 function safeText(input, maxLen) {
     const s = String(input == null ? '' : input);
@@ -174,6 +215,14 @@ function ensureTicketForConversation(socketId) {
     };
     tickets.set(id, ticket);
     conv.ticketId = id;
+
+    discordNotify('🎫 New ticket created', [
+        `**Ticket:** ${id}`,
+        `**User:** ${conv.name || socketId}`,
+        ticket.form?.issue ? `**Issue:** ${ticket.form.issue}` : null,
+        ticket.priority ? `**Priority:** ${ticket.priority}` : null
+    ]);
+
     return ticket;
 }
 
@@ -465,6 +514,13 @@ io.on('connection', (socket) => {
             });
         }
         broadcastAdminConversations();
+
+        const t = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        discordNotify('💬 User message', [
+            t?.id ? `**Ticket:** ${t.id}` : `**Socket:** ${socket.id}`,
+            `**User:** ${safeUserLabel(data && data.user)}`,
+            `**Text:** ${text}`
+        ]);
     });
 
     socket.on('sendImage', (payload) => {
@@ -508,6 +564,14 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('newMessage', message);
         io.to('admins').emit('adminMessage', { socketId: socket.id, message });
         broadcastAdminConversations();
+
+        const t = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        discordNotify('🖼️ User image upload', [
+            t?.id ? `**Ticket:** ${t.id}` : `**Socket:** ${socket.id}`,
+            `**User:** ${safeUserLabel(payload && payload.user)}`,
+            `**File:** ${(safeText(payload && payload.name, 80) || 'image')}`,
+            `**Size:** ${Math.round(size / 1024)} KB`
+        ]);
     });
 
     socket.on('setUserName', (payload) => {
@@ -566,6 +630,13 @@ io.on('connection', (socket) => {
         ticket.updatedAt = new Date().toISOString();
         conv.lastSeenAt = new Date().toISOString();
         broadcastAdminConversations();
+
+        discordNotify('📝 Pre-chat form submitted', [
+            `**Ticket:** ${ticket.id}`,
+            `**User:** ${conv.name || socket.id}`,
+            `**Issue:** ${ticket.form?.issue || 'other'}`,
+            `**Desc:** ${(ticket.form?.desc || '').slice(0, 250)}`
+        ]);
     });
 
     socket.on('userTyping', (payload) => {
@@ -670,6 +741,13 @@ io.on('connection', (socket) => {
         // Update other admins
         io.to('admins').emit('adminMessage', { socketId, message });
         broadcastAdminConversations();
+
+        const t = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        discordNotify('🧑‍💼 Staff reply', [
+            t?.id ? `**Ticket:** ${t.id}` : `**Socket:** ${socketId}`,
+            `**Staff:** ${staffStatus.user || 'Staff'}`,
+            `**Text:** ${safeText(text, 250)}`
+        ]);
     });
 
     socket.on('adminUpdateConversation', ({ socketId, tags, notes }) => {
@@ -719,6 +797,14 @@ io.on('connection', (socket) => {
 
         ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
+
+        discordNotify('🛠️ Ticket updated', [
+            `**Ticket:** ${ticket.id}`,
+            `**By:** ${staffStatus.user || 'Staff'}`,
+            status !== undefined ? `**Status:** ${ticket.status}` : null,
+            priority !== undefined ? `**Priority:** ${ticket.priority}` : null,
+            assignee !== undefined ? `**Assignee:** ${ticket.assignee || 'unassigned'}` : null
+        ]);
     });
 
     socket.on('adminTicketClaim', ({ ticketId, force }) => {
@@ -740,6 +826,12 @@ io.on('connection', (socket) => {
         };
         ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
+
+        discordNotify('🔒 Ticket claimed', [
+            `**Ticket:** ${ticket.id}`,
+            `**By:** ${staffStatus.user || 'Staff'}`,
+            Boolean(force) ? '**Mode:** force take' : '**Mode:** claim'
+        ]);
     });
 
     socket.on('adminTicketClaimClear', ({ ticketId }) => {
@@ -751,6 +843,11 @@ io.on('connection', (socket) => {
         ticket.claim = null;
         ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
+
+        discordNotify('🔓 Ticket released', [
+            `**Ticket:** ${ticket.id}`,
+            `**By:** ${staffStatus.user || 'Staff'}`
+        ]);
     });
 
     socket.on('adminModerationAction', ({ socketId, action, durationMs }) => {
