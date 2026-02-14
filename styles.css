@@ -106,33 +106,38 @@ nav {
     left: 0;
     right: 0;
     z-index: 1000;
-    background: rgba(11, 11, 13, 0.78);
-    backdrop-filter: blur(18px);
+    background: rgba(11, 11, 13, 0.85);
+    backdrop-filter: blur(24px) saturate(180%);
     border-bottom: 1px solid var(--border);
-    transition: all 0.4s ease;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 nav:hover {
-    background: rgba(11, 11, 13, 0.88);
-    border-bottom-color: rgba(255, 106, 0, 0.25);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    background: rgba(11, 11, 13, 0.92);
+    border-bottom-color: rgba(255, 106, 0, 0.3);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.52), 0 1px 0 rgba(255, 106, 0, 0.15);
 }
 
 .nav-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 15px 30px;
+    padding: 18px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 14px;
+    gap: 20px;
 }
 
 .nav-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    transition: transform 0.2s ease;
+}
+
+.nav-logo:hover {
+    transform: scale(1.02);
 }
 
 .logo-text {
@@ -142,33 +147,47 @@ nav:hover {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(255, 106, 0, 0.3));
+    transition: filter 0.3s ease;
+}
+
+.nav-logo:hover .logo-text {
+    filter: drop-shadow(0 4px 8px rgba(255, 106, 0, 0.5));
 }
 
 .logo-badge {
-    background: var(--orange-primary);
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     color: white;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: 5px 10px;
+    border-radius: 10px;
     font-size: 0.7rem;
     font-weight: 700;
+    box-shadow: 0 2px 8px rgba(255, 106, 0, 0.4);
+    transition: all 0.2s ease;
+}
+
+.nav-logo:hover .logo-badge {
+    box-shadow: 0 4px 12px rgba(255, 106, 0, 0.6);
+    transform: translateY(-1px);
 }
 
 .nav-links {
     display: flex;
-    gap: 30px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
 }
 
 .nav-link {
-    color: var(--text-primary);
+    color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    padding: 8px 16px;
-    border-radius: 12px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-size: 0.95rem;
 }
 
 .nav-link::before {
@@ -178,38 +197,41 @@ nav:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 106, 0, 0.10), rgba(255, 106, 0, 0.04));
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 106, 0, 0.15), rgba(255, 138, 42, 0.08));
+    border-radius: 14px;
     opacity: 0;
-    transition: all 0.4s ease;
-    transform: scale(0.8);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(0.95);
+    filter: blur(0px);
 }
 
 .nav-link:hover {
-    color: rgba(255, 106, 0, 0.95);
-    transform: translateY(-2px);
+    color: var(--orange-glow);
+    transform: translateY(-1px);
 }
 
 .nav-link:hover::before {
     opacity: 1;
     transform: scale(1);
+    filter: blur(0px);
 }
 
 .nav-link::after {
     content: '';
     position: absolute;
-    bottom: -8px;
+    bottom: -6px;
     left: 50%;
     width: 0;
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, var(--orange-primary), var(--orange-glow));
-    transition: all 0.4s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateX(-50%);
     border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(255, 106, 0, 0.4);
 }
 
 .nav-link:hover::after {
-    width: 80%;
+    width: 70%;
 }
 
 /* Mobile Staff Login Button */
@@ -218,23 +240,25 @@ nav:hover {
     background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     border: none;
     color: white;
-    padding: 10px 15px;
-    border-radius: 12px;
+    padding: 12px 18px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     font-weight: 600;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(255, 106, 0, 0.3);
 }
 
 .mobile-staff-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.45);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
 }
 
 /* Hero Section */
 .hero {
-    padding: 120px 0 84px;
+    padding: 140px 0 100px;
     background: transparent;
     position: relative;
     overflow: hidden;
@@ -262,7 +286,7 @@ nav:hover {
 .hero-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 30px;
+    padding: 0 32px;
     text-align: center;
     position: relative;
     z-index: 1;
@@ -271,17 +295,25 @@ nav:hover {
 .hero-badge {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255, 106, 0, 0.12);
-    border: 1px solid rgba(255, 106, 0, 0.22);
-    padding: 12px 24px;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(255, 106, 0, 0.15), rgba(255, 106, 0, 0.08));
+    border: 1px solid rgba(255, 106, 0, 0.25);
+    padding: 14px 28px;
     border-radius: 50px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--orange-primary);
-    margin-bottom: 30px;
-    backdrop-filter: blur(10px);
+    color: var(--orange-glow);
+    margin-bottom: 36px;
+    backdrop-filter: blur(12px) saturate(180%);
+    box-shadow: 0 4px 20px rgba(255, 106, 0, 0.2);
+    transition: all 0.3s ease;
     animation: none;
+}
+
+.hero-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(255, 106, 0, 0.3);
+    border-color: rgba(255, 106, 0, 0.35);
 }
 
 @keyframes badgePulse {
@@ -296,10 +328,16 @@ nav:hover {
 }
 
 .hero-title {
-    font-size: 3.5rem;
+    font-size: clamp(2.5rem, 5vw, 4rem);
     font-weight: 900;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s ease;
 }
 
 @keyframes textShimmer {
@@ -308,30 +346,33 @@ nav:hover {
 }
 
 .hero-subtitle {
-    font-size: 1.3rem;
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
     color: var(--text-secondary);
-    margin-bottom: 40px;
+    margin-bottom: 48px;
     line-height: 1.6;
     opacity: 0.9;
+    max-width: 65ch;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .hero-actions {
     display: flex;
-    gap: 14px;
-    justify-content: flex-start;
+    gap: 16px;
+    justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
 
 .chat-toggle-btn, .staff-login-btn {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 15px 30px;
-    border-radius: 12px;
+    gap: 12px;
+    padding: 16px 32px;
+    border-radius: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.4s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     font-size: 1rem;
     position: relative;
@@ -345,8 +386,8 @@ nav:hover {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s ease;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-toggle-btn:hover::before, .staff-login-btn:hover::before {
@@ -354,45 +395,57 @@ nav:hover {
 }
 
 .chat-toggle-btn {
-    background: linear-gradient(135deg, rgba(255, 106, 0, 1), rgba(255, 138, 42, 1));
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     color: white;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.4);
 }
 
 .chat-toggle-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(255, 106, 0, 0.55);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
 }
 
 .staff-login-btn {
-    background: rgba(255, 255, 255, 0.06);
-    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
     border: 1px solid var(--border);
-    box-shadow: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .staff-login-btn:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 106, 0, 0.25);
+    transform: translateY(-3px);
+    border-color: rgba(255, 106, 0, 0.4);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .staff-info {
-    padding: 18px;
+    padding: 24px;
     background: var(--panel-2);
     border: 1px solid var(--border);
-    border-radius: 15px;
-    backdrop-filter: blur(14px);
+    border-radius: 18px;
+    backdrop-filter: blur(16px) saturate(180%);
     max-width: 600px;
     margin: 0 auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.staff-info:hover {
+    border-color: rgba(255, 106, 0, 0.2);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
 }
 
 .staff-info p {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    line-height: 1.7;
 }
 
 .staff-info strong {
-    color: rgba(255, 106, 0, 0.95);
+    color: var(--orange-glow);
+    font-weight: 600;
 }
 
 /* Chat Widget */
@@ -400,13 +453,19 @@ nav:hover {
     width: 100%;
     height: clamp(420px, 70vh, 560px);
     background: var(--panel);
-    border: 1px solid rgba(255, 106, 0, 0.18);
-    border-radius: 20px;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 106, 0, 0.2);
+    border-radius: 24px;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 106, 0, 0.05);
     display: flex;
     flex-direction: column;
     z-index: 1;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(24px) saturate(180%);
+    transition: all 0.3s ease;
+}
+
+.chat-widget:hover {
+    border-color: rgba(255, 106, 0, 0.3);
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 106, 0, 0.1);
 }
 
 .chat-widget.embedded {
@@ -414,12 +473,14 @@ nav:hover {
 }
 
 .chat-header {
-    background: linear-gradient(135deg, rgba(255, 106, 0, 1), rgba(255, 138, 42, 1));
-    padding: 15px 20px;
-    border-radius: 20px 20px 0 0;
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    padding: 18px 24px;
+    border-radius: 24px 24px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .chat-header-info {
@@ -429,10 +490,11 @@ nav:hover {
 .chat-status {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     color: white;
     font-weight: 600;
     min-width: 0;
+    font-size: 0.95rem;
 }
 
 .chat-status span:last-child {
@@ -444,11 +506,12 @@ nav:hover {
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.9);
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 50%;
     animation: statusPulse 2s infinite;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 @keyframes statusPulse {
@@ -458,32 +521,35 @@ nav:hover {
 
 .chat-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .chat-action-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .chat-action-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
 }
 
 .chat-messages {
     flex: 1;
-    padding: 20px;
+    padding: 24px;
     overflow-y: auto;
-    background: rgba(11, 11, 13, 0.35);
+    background: rgba(11, 11, 13, 0.4);
+    backdrop-filter: blur(8px);
 }
 
 .chat-messages {
@@ -491,22 +557,24 @@ nav:hover {
 }
 
 .chat-messages::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(255, 106, 0, 0.85);
-    border-radius: 3px;
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
 
 .welcome-message, .message {
-    margin-bottom: 15px;
-    animation: messageSlideIn 0.3s ease-out;
+    margin-bottom: 18px;
+    animation: messageSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .message {
@@ -516,23 +584,30 @@ nav:hover {
 @keyframes messageSlideIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(15px) scale(0.98);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 .message-content {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--border);
-    border-radius: 15px;
-    padding: 12px 16px;
+    border-radius: 18px;
+    padding: 14px 18px;
     color: var(--text-primary);
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: pre-wrap;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+.message-content:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 106, 0, 0.15);
 }
 
 .message-content p {
@@ -541,88 +616,110 @@ nav:hover {
 }
 
 .message.user .message-content {
-    background: linear-gradient(135deg, rgba(255, 106, 0, 0.92), rgba(255, 138, 42, 0.92));
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     color: white;
     border-bottom-right-radius: 8px;
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.message.user .message-content:hover {
+    box-shadow: 0 6px 20px rgba(255, 106, 0, 0.4);
+    transform: translateY(-1px);
 }
 
 .message.staff .message-content {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-bottom-left-radius: 8px;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+
+.message.staff .message-content:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 106, 0, 0.2);
 }
 
 .chat-input-container {
-    padding: 20px;
-    background: rgba(11, 11, 13, 0.5);
+    padding: 24px;
+    background: rgba(11, 11, 13, 0.6);
     border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
 }
 
 .quick-actions {
     display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
+    gap: 10px;
+    margin-bottom: 18px;
     flex-wrap: wrap;
 }
 
 .quick-action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    padding: 8px 12px;
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-radius: 22px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.8rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.85rem;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
 }
 
 .quick-action-btn:hover {
-    background: rgba(255, 106, 0, 0.10);
-    border-color: rgba(255, 106, 0, 0.22);
-    color: rgba(255, 106, 0, 0.95);
+    background: rgba(255, 106, 0, 0.15);
+    border-color: rgba(255, 106, 0, 0.3);
+    color: var(--orange-glow);
     transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.2);
 }
 
 .chat-input-wrapper {
     display: flex;
-    gap: 10px;
+    gap: 12px;
 }
 
 .chat-input-wrapper input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--border);
-    border-radius: 25px;
-    padding: 12px 20px;
+    border-radius: 28px;
+    padding: 14px 24px;
     color: var(--text-primary);
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .chat-input-wrapper input:focus {
     outline: none;
-    border-color: rgba(255, 106, 0, 0.32);
+    border-color: rgba(255, 106, 0, 0.4);
     box-shadow: 0 0 0 3px var(--ring);
+    background: rgba(255, 255, 255, 0.08);
     transform: none;
 }
 
 .chat-send-btn {
-    background: linear-gradient(135deg, rgba(255, 106, 0, 1), rgba(255, 138, 42, 1));
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     border: none;
     color: white;
-    width: 45px;
-    height: 45px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.3);
 }
 
 .chat-send-btn:hover {
-    transform: scale(1.06);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+    transform: scale(1.08);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.45);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
 }
 
 /* Staff Login Modal */
@@ -632,30 +729,30 @@ nav:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(16px) saturate(180%);
 }
 
 .staff-modal-content {
     background: var(--panel);
-    border: 1px solid rgba(255, 106, 0, 0.18);
-    border-radius: 20px;
-    padding: 40px;
+    border: 1px solid rgba(255, 106, 0, 0.25);
+    border-radius: 24px;
+    padding: 48px;
     max-width: 500px;
     width: 90%;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    animation: modalSlideIn 0.3s ease-out;
+    backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 106, 0, 0.1);
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes modalSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-50px) scale(0.8);
+        transform: translateY(-40px) scale(0.9);
     }
     to {
         opacity: 1;
@@ -664,99 +761,132 @@ nav:hover {
 }
 
 .staff-modal-content h3 {
-    color: rgba(255, 106, 0, 0.95);
+    color: var(--orange-glow);
     font-size: 1.8rem;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     text-align: center;
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .staff-credentials-info {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.staff-credentials-info:hover {
+    border-color: rgba(255, 106, 0, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .staff-credentials-info p {
     color: var(--text-primary);
-    margin-bottom: 15px;
+    margin-bottom: 18px;
     font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .credential-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .credential-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+}
+
+.credential-item:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .role {
     color: var(--text-secondary);
     font-weight: 500;
+    font-size: 0.9rem;
 }
 
 .creds {
-    color: rgba(255, 106, 0, 0.95);
-    font-family: monospace;
+    color: var(--orange-glow);
+    font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    background: rgba(255, 106, 0, 0.10);
-    padding: 2px 6px;
-    border-radius: 4px;
+    background: rgba(255, 106, 0, 0.15);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 106, 0, 0.2);
+    font-weight: 600;
 }
 
 .staff-modal-content form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 18px;
 }
 
 .staff-modal-content input {
     width: 100%;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
     color: var(--text-primary);
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .staff-modal-content input:focus {
     outline: none;
-    border-color: rgba(255, 106, 0, 0.32);
+    border-color: rgba(255, 106, 0, 0.4);
     box-shadow: 0 0 0 3px var(--ring);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .staff-modal-content button {
     background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     border: none;
     color: white;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 16px 24px;
+    border-radius: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.staff-modal-content button[type="button"] {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1rem;
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.3);
 }
 
 .staff-modal-content button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.45);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
+}
+
+.staff-modal-content button[type="button"] {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+}
+
+.staff-modal-content button[type="button"]:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 106, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Mobile Staff Login Modal */
@@ -766,77 +896,93 @@ nav:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(16px) saturate(180%);
 }
 
 .mobile-modal-content {
     background: var(--panel);
-    border: 1px solid rgba(255, 106, 0, 0.18);
+    border: 1px solid rgba(255, 106, 0, 0.25);
     border-radius: 20px;
-    padding: 30px;
+    padding: 36px;
     max-width: 400px;
     width: 90%;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    animation: modalSlideIn 0.3s ease-out;
+    backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.6);
+    animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mobile-modal-content h3 {
-    color: rgba(255, 106, 0, 0.95);
+    color: var(--orange-glow);
     font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     text-align: center;
+    background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .mobile-modal-content form {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 18px;
 }
 
 .mobile-modal-content input {
     width: 100%;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
     color: var(--text-primary);
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 }
 
 .mobile-modal-content input:focus {
     outline: none;
-    border-color: var(--orange-primary);
-    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+    border-color: rgba(255, 106, 0, 0.4);
+    box-shadow: 0 0 0 3px var(--ring);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .mobile-modal-content button {
     background: linear-gradient(135deg, var(--orange-primary), var(--orange-glow));
     border: none;
     color: white;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 16px 24px;
+    border-radius: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.mobile-modal-content button[type="button"] {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 1rem;
+    box-shadow: 0 4px 16px rgba(255, 106, 0, 0.3);
 }
 
 .mobile-modal-content button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+    box-shadow: 0 8px 24px rgba(255, 106, 0, 0.45);
+    background: linear-gradient(135deg, var(--orange-glow), var(--orange-primary));
+}
+
+.mobile-modal-content button[type="button"] {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+}
+
+.mobile-modal-content button[type="button"]:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 106, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Mobile Responsive */
@@ -851,25 +997,27 @@ nav:hover {
     }
     
     .hero-title {
-        font-size: 2.25rem;
+        font-size: clamp(2rem, 5vw, 2.5rem);
     }
 
     .hero {
-        padding: 96px 0 54px;
+        padding: 100px 0 60px;
     }
     
     .hero-actions {
         flex-direction: column;
         align-items: center;
+        gap: 12px;
     }
     
     .chat-toggle-btn, .staff-login-btn {
         width: 100%;
         justify-content: center;
+        max-width: 280px;
     }
 
     .nav-links {
-        gap: 10px;
+        gap: 8px;
     }
 
     .nav-link {
@@ -887,8 +1035,8 @@ nav:hover {
     padding-top: 80px;
     max-width: 1200px;
     margin: 0 auto;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
 }
 
 .admin-header {
@@ -898,19 +1046,31 @@ nav:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    background: rgba(11, 11, 13, 0.72);
+    gap: 20px;
+    background: rgba(11, 11, 13, 0.8);
     border: 1px solid var(--border);
-    backdrop-filter: blur(20px);
-    border-radius: 18px;
-    padding: 14px 16px;
-    margin: 20px 0 22px;
+    backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 20px;
+    padding: 16px 20px;
+    margin: 24px 0 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.admin-header:hover {
+    border-color: rgba(255, 106, 0, 0.2);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
 }
 
 .admin-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    transition: transform 0.2s ease;
+}
+
+.admin-logo:hover {
+    transform: scale(1.02);
 }
 
 .admin-nav {
