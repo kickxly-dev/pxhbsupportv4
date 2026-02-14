@@ -500,6 +500,10 @@ nav:hover {
     animation: messageSlideIn 0.3s ease-out;
 }
 
+.message {
+    max-width: 100%;
+}
+
 @keyframes messageSlideIn {
     from {
         opacity: 0;
@@ -517,6 +521,14 @@ nav:hover {
     border-radius: 15px;
     padding: 12px 16px;
     color: var(--text-primary);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.message-content p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .message.user .message-content {
