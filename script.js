@@ -3,6 +3,14 @@ const socket = io();
 let isSendingMessage = false;
 let lastMessageTime = 0;
 
+let isTyping = false;
+let typingTimer = null;
+let staffTypingTimer = null;
+let defaultStatusLabel = 'Support Team';
+
+let audioCtx = null;
+let audioUnlocked = false;
+
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const seenMessageIds = new Set();
 
@@ -23,6 +31,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (msgId && seenMessageIds.has(msgId)) return;
         if (msgId) seenMessageIds.add(msgId);
         addMessage(message?.text || '', message?.type || 'user');
+
+        if ((message?.type || '').toLowerCase() === 'staff') {
+            playNotificationSound();
+        }
     });
 
     // Handle staff status updates
@@ -51,6 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
             emitTypingState(false);
         });
     }
+
+    setupAudioUnlock();
 });
 
 // Chat functions
@@ -154,6 +168,52 @@ function emitTypingState(next) {
             socket.emit('userTyping', { clientId, isTyping: false });
         }
     }, 1200);
+}
+
+function setupAudioUnlock() {
+    const unlock = () => {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            audioUnlocked = true;
+        } catch {
+            // ignore
+        }
+        document.removeEventListener('pointerdown', unlock, true);
+        document.removeEventListener('keydown', unlock, true);
+    };
+
+    document.addEventListener('pointerdown', unlock, true);
+    document.addEventListener('keydown', unlock, true);
+}
+
+function playNotificationSound() {
+    try {
+        if (!audioUnlocked) return;
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.17);
+    } catch {
+        // ignore
+    }
 }
 
 function escapeHtml(str) {
