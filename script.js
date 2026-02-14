@@ -11,6 +11,8 @@ let defaultStatusLabel = 'Support Team';
 let audioCtx = null;
 let audioUnlocked = false;
 
+let displayName = 'User';
+
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const seenMessageIds = new Set();
 
@@ -52,6 +54,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Check for existing staff session
     checkStaffSession();
+
+    initDisplayName();
+    socket.emit('setUserName', { name: displayName });
 
     const input = document.getElementById('chatInput');
     if (input) {
@@ -97,7 +102,7 @@ function sendMessage() {
             id: clientMsgId,
             clientId,
             text: message,
-            user: 'User',
+            user: displayName,
             type: 'user'
         });
 
@@ -120,13 +125,32 @@ function sendQuickMessage(message) {
             id: clientMsgId,
             clientId,
             text: msg,
-            user: 'User',
+            user: displayName,
             type: 'user'
         });
 
         setTimeout(() => {
             isSendingMessage = false;
         }, 300);
+    }
+}
+
+function initDisplayName() {
+    const stored = sessionStorage.getItem('pxhb_displayName');
+    if (stored && String(stored).trim()) {
+        displayName = String(stored).trim().slice(0, 40);
+        return;
+    }
+
+    try {
+        const name = window.prompt('Choose a username for support chat:', '') || '';
+        const cleaned = String(name).trim().slice(0, 40);
+        if (cleaned) {
+            displayName = cleaned;
+            sessionStorage.setItem('pxhb_displayName', displayName);
+        }
+    } catch {
+        // ignore
     }
 }
 

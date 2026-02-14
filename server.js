@@ -336,6 +336,16 @@ io.on('connection', (socket) => {
         broadcastAdminConversations();
     });
 
+    socket.on('setUserName', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        const next = safeText(payload && payload.name, MAX_NAME_LEN);
+        if (!next) return;
+        conv.name = next;
+        broadcastAdminConversations();
+    });
+
     socket.on('userTyping', (payload) => {
         if (isStaff) return;
         const now = Date.now();
