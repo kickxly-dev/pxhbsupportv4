@@ -65,6 +65,29 @@
                             </div>
                         </div>
 
+                        <div class="prechat-gate" id="preChatGate" style="display:none;">
+                            <div class="prechat-card">
+                                <h3>Quick Support Form</h3>
+                                <p>Please fill this out to start the chat.</p>
+                                <div class="prechat-row">
+                                    <label>Issue Type</label>
+                                    <select id="preChatIssue" required>
+                                        <option value="" selected disabled>Select one…</option>
+                                        <option value="billing">Billing</option>
+                                        <option value="login">Login</option>
+                                        <option value="bug">Bug / Technical</option>
+                                        <option value="ban">Ban / Mute Appeal</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="prechat-row">
+                                    <label>Short Description</label>
+                                    <textarea id="preChatDesc" placeholder="What happened?" maxlength="300" required></textarea>
+                                </div>
+                                <button class="prechat-btn" onclick="submitPreChatForm()">Start Chat</button>
+                            </div>
+                        </div>
+
                         <div class="chat-messages" id="chatMessages">
                             <div class="welcome-message">
                                 <div class="message-content">
@@ -80,6 +103,10 @@
                                 <button onclick="sendQuickMessage('I need billing support')" class="quick-action-btn">Billing</button>
                             </div>
                             <div class="chat-input-wrapper">
+                                <input type="file" id="chatImageInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleChatImageSelected(event)">
+                                <button onclick="openChatImagePicker()" class="chat-attach-btn" aria-label="Upload image">
+                                    <i class="fas fa-paperclip"></i>
+                                </button>
                                 <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
                                 <button onclick="sendMessage()" class="chat-send-btn">
                                     <i class="fas fa-paper-plane"></i>

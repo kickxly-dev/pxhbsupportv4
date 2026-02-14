@@ -681,6 +681,106 @@ nav:hover {
     gap: 12px;
 }
 
+.chat-widget {
+    position: relative;
+}
+
+.prechat-gate {
+    position: absolute;
+    inset: 72px 0 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(14px);
+    z-index: 20;
+}
+
+.prechat-card {
+    width: min(520px, 100%);
+    background: rgba(11, 11, 13, 0.9);
+    border: 1px solid rgba(255, 106, 0, 0.22);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.6);
+}
+
+.prechat-card h3 {
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.prechat-card p {
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.prechat-row {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.prechat-row label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.prechat-row select,
+.prechat-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.prechat-row textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.prechat-btn {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 107, 53, 0.35);
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.75), rgba(255, 140, 66, 0.35));
+    color: white;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.chat-attach-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-attach-btn:hover {
+    background: rgba(255, 106, 0, 0.12);
+    border-color: rgba(255, 106, 0, 0.22);
+}
+
+.message-image {
+    max-width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: block;
+}
+
 .chat-input-wrapper input {
     flex: 1;
     background: rgba(255, 255, 255, 0.06);

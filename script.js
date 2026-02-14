@@ -13,6 +13,8 @@ let audioUnlocked = false;
 
 let displayName = 'User';
 
+let preChatReady = false;
+
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const seenMessageIds = new Set();
 
@@ -23,7 +25,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const list = Array.isArray(messages) ? messages : [];
         list.forEach((msg) => {
             if (msg && msg.id != null) seenMessageIds.add(String(msg.id));
-            addMessage(msg?.text || '', msg?.type || 'user');
+            if (msg && msg.image && msg.image.dataUrl) {
+                addImageMessage(msg.image.dataUrl, msg?.type || 'user');
+            } else {
+                addMessage(msg?.text || '', msg?.type || 'user');
+            }
         });
     });
 
@@ -32,7 +38,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const msgId = message && message.id != null ? String(message.id) : null;
         if (msgId && seenMessageIds.has(msgId)) return;
         if (msgId) seenMessageIds.add(msgId);
-        addMessage(message?.text || '', message?.type || 'user');
+        if (message && message.image && message.image.dataUrl) {
+            addImageMessage(message.image.dataUrl, message?.type || 'user');
+        } else {
+            addMessage(message?.text || '', message?.type || 'user');
+        }
 
         if ((message?.type || '').toLowerCase() === 'staff') {
             playNotificationSound();
@@ -58,6 +68,10 @@ document.addEventListener('DOMContentLoaded', function () {
     initDisplayName();
     socket.emit('setUserName', { name: displayName });
 
+    socket.emit('clientMeta', { path: window.location.pathname, ua: navigator.userAgent });
+
+    initPreChatGate();
+
     const input = document.getElementById('chatInput');
     if (input) {
         input.addEventListener('input', () => {
@@ -71,6 +85,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupAudioUnlock();
 });
+
+function initPreChatGate() {
+    const gate = document.getElementById('preChatGate');
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.querySelector('.chat-send-btn');
+    const attachBtn = document.querySelector('.chat-attach-btn');
+
+    preChatReady = false;
+    if (gate) gate.style.display = 'flex';
+    if (input) input.disabled = true;
+    if (sendBtn) sendBtn.disabled = true;
+    if (attachBtn) attachBtn.disabled = true;
+}
+
+function submitPreChatForm() {
+    const issue = document.getElementById('preChatIssue')?.value || '';
+    const desc = (document.getElementById('preChatDesc')?.value || '').trim();
+    if (!issue || !desc) return;
+
+    socket.emit('preChatSubmit', { issue, desc });
+
+    const gate = document.getElementById('preChatGate');
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.querySelector('.chat-send-btn');
+    const attachBtn = document.querySelector('.chat-attach-btn');
+
+    preChatReady = true;
+    if (gate) gate.style.display = 'none';
+    if (input) input.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (attachBtn) attachBtn.disabled = false;
+    if (input) input.focus();
+}
 
 // Chat functions
 function openChat() {
@@ -91,6 +138,7 @@ function sendMessage() {
     const message = (input?.value || '').trim();
     const currentTime = Date.now();
 
+    if (!preChatReady) return;
     if (message && !isSendingMessage && (currentTime - lastMessageTime) > 600) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -116,6 +164,7 @@ function sendQuickMessage(message) {
     const msg = (message || '').trim();
     const currentTime = Date.now();
 
+    if (!preChatReady) return;
     if (msg && !isSendingMessage && (currentTime - lastMessageTime) > 600) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -161,12 +210,18 @@ function addMessage(text, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
 
-    messageDiv.innerHTML = `
-        <div class="message-content">
-            <p>${escapeHtml(String(text))}</p>
-        </div>
-    `;
+    messageDiv.innerHTML = `<div class="message-content"><p>${escapeHtml(String(text))}</p></div>`;
 
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function addImageMessage(dataUrl, type) {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer) return;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.innerHTML = `<div class="message-content"><img class="message-image" src="${escapeHtml(String(dataUrl))}" alt="upload" /></div>`;
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
@@ -175,6 +230,38 @@ function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
     }
+}
+
+function openChatImagePicker() {
+    if (!preChatReady) return;
+    const input = document.getElementById('chatImageInput');
+    if (input) input.click();
+}
+
+function handleChatImageSelected(event) {
+    if (!preChatReady) return;
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    const input = document.getElementById('chatImageInput');
+    if (input) input.value = '';
+
+    const mime = String(file.type || '').toLowerCase();
+    if (mime !== 'image/png' && mime !== 'image/jpeg' && mime !== 'image/webp') return;
+    if (file.size > 5 * 1024 * 1024) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const dataUrl = String(reader.result || '');
+        if (!dataUrl.startsWith('data:image/')) return;
+        socket.emit('sendImage', {
+            dataUrl,
+            size: file.size,
+            mime,
+            name: file.name,
+            user: displayName
+        });
+    };
+    reader.readAsDataURL(file);
 }
 
 function emitTypingState(next) {

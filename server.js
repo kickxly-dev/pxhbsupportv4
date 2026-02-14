@@ -22,6 +22,8 @@ function parseCookies(cookieHeader) {
 
 const MAX_MESSAGE_TEXT = 1000;
 const MAX_NAME_LEN = 40;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_DATA_URL_LEN = 8_500_000;
 
 function safeText(input, maxLen) {
     const s = String(input == null ? '' : input);
@@ -31,6 +33,11 @@ function safeText(input, maxLen) {
 function safeUserLabel(input) {
     const s = safeText(input, MAX_NAME_LEN);
     return s || 'User';
+}
+
+function safeEnum(input, allowed, fallback) {
+    const s = String(input == null ? '' : input).toLowerCase();
+    return allowed.includes(s) ? s : fallback;
 }
 
 function isStaffFromCookieHeader(cookieHeader) {
@@ -161,7 +168,9 @@ function ensureTicketForConversation(socketId) {
         updatedAt: new Date().toISOString(),
         status: 'open',
         priority: 'normal',
-        assignee: null
+        assignee: null,
+        claim: null,
+        form: null
     };
     tickets.set(id, ticket);
     conv.ticketId = id;
@@ -177,8 +186,19 @@ function getTicketSummary(ticket) {
         status: ticket.status,
         priority: ticket.priority,
         assignee: ticket.assignee,
+        claim: ticket.claim || null,
+        form: ticket.form || null,
         createdAt: ticket.createdAt,
         updatedAt: ticket.updatedAt,
+        agentView: conv?.clientMeta
+            ? {
+                  path: conv.clientMeta.path || null,
+                  ua: conv.clientMeta.ua || null,
+                  at: conv.clientMeta.at || null
+              }
+            : null,
+        online: Boolean(conv?.connected),
+        lastSeenAt: conv?.lastSeenAt || null,
         name: conv?.name || null,
         lastText: conv?.messages?.length ? conv.messages[conv.messages.length - 1].text : '',
         lastAt: conv?.messages?.length ? conv.messages[conv.messages.length - 1].timestamp : null,
@@ -226,6 +246,8 @@ function getConversationSummary(socketId) {
                   status: ticket.status,
                   priority: ticket.priority,
                   assignee: ticket.assignee,
+                  claim: ticket.claim || null,
+                  form: ticket.form || null,
                   createdAt: ticket.createdAt,
                   updatedAt: ticket.updatedAt
               }
@@ -337,7 +359,10 @@ io.on('connection', (socket) => {
             mutedUntil: null,
             banned: false,
             verified: false,
-            verifyChallenge: null
+            verifyChallenge: null,
+            lastSeenAt: new Date().toISOString(),
+            clientMeta: null,
+            ticketId: null
         });
         broadcastAdminConversations();
     }
@@ -345,8 +370,8 @@ io.on('connection', (socket) => {
     // Send existing messages to the connected user only (privacy)
     if (!isStaff) {
         const conv = conversations.get(socket.id);
-
         if (conv) {
+            conv.lastSeenAt = new Date().toISOString();
             ensureTicketForConversation(socket.id);
         }
         socket.emit('loadMessages', conv?.messages || []);
@@ -442,6 +467,49 @@ io.on('connection', (socket) => {
         broadcastAdminConversations();
     });
 
+    socket.on('sendImage', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        if (conv.banned) return;
+        if (conv.mutedUntil && Date.now() < Number(new Date(conv.mutedUntil))) return;
+
+        conv.lastSeenAt = new Date().toISOString();
+        ensureTicketForConversation(socket.id);
+
+        const dataUrl = String(payload && payload.dataUrl ? payload.dataUrl : '');
+        const size = Number(payload && payload.size ? payload.size : 0);
+        const mime = String(payload && payload.mime ? payload.mime : '').toLowerCase();
+
+        if (!dataUrl || dataUrl.length > MAX_IMAGE_DATA_URL_LEN) return;
+        if (!Number.isFinite(size) || size <= 0 || size > MAX_IMAGE_BYTES) return;
+        if (mime !== 'image/png' && mime !== 'image/jpeg' && mime !== 'image/webp') return;
+        if (!dataUrl.startsWith('data:image/')) return;
+
+        const message = {
+            id: Date.now(),
+            user: safeUserLabel(payload && payload.user),
+            text: '[image]',
+            timestamp: new Date(),
+            type: 'user',
+            socketId: socket.id,
+            image: {
+                dataUrl,
+                mime,
+                size,
+                name: safeText(payload && payload.name, 80) || null
+            }
+        };
+
+        messages.push(message);
+        conv.messages.push(message);
+        conv.unread += 1;
+
+        io.to(socket.id).emit('newMessage', message);
+        io.to('admins').emit('adminMessage', { socketId: socket.id, message });
+        broadcastAdminConversations();
+    });
+
     socket.on('setUserName', (payload) => {
         if (isStaff) return;
         const conv = conversations.get(socket.id);
@@ -449,6 +517,54 @@ io.on('connection', (socket) => {
         const next = safeText(payload && payload.name, MAX_NAME_LEN);
         if (!next) return;
         conv.name = next;
+        conv.lastSeenAt = new Date().toISOString();
+        broadcastAdminConversations();
+    });
+
+    socket.on('clientMeta', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        const pathVal = safeText(payload && payload.path, 200);
+        const uaVal = safeText(payload && payload.ua, 300);
+        conv.clientMeta = {
+            path: pathVal || null,
+            ua: uaVal || null,
+            at: new Date().toISOString()
+        };
+        conv.lastSeenAt = new Date().toISOString();
+        broadcastAdminConversations();
+    });
+
+    socket.on('preChatSubmit', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        const ticket = ensureTicketForConversation(socket.id);
+        if (!ticket) return;
+
+        const issue = safeEnum(payload && payload.issue, ['billing', 'login', 'bug', 'ban', 'other'], 'other');
+        const desc = safeText(payload && payload.desc, 300);
+        ticket.form = {
+            issue,
+            desc,
+            submittedAt: new Date().toISOString()
+        };
+
+        if (issue === 'billing') {
+            ticket.priority = 'high';
+        } else if (issue === 'login') {
+            ticket.priority = 'normal';
+        } else if (issue === 'bug') {
+            ticket.priority = 'normal';
+        } else if (issue === 'ban') {
+            ticket.priority = 'low';
+        } else {
+            ticket.priority = 'normal';
+        }
+
+        ticket.updatedAt = new Date().toISOString();
+        conv.lastSeenAt = new Date().toISOString();
         broadcastAdminConversations();
     });
 
@@ -531,6 +647,11 @@ io.on('connection', (socket) => {
         if (!conv) return;
         if (conv.banned) return;
 
+        const ticket = conv.ticketId ? tickets.get(conv.ticketId) : null;
+        if (ticket && ticket.claim && ticket.claim.user && ticket.claim.user !== (staffStatus.user || 'Staff')) {
+            return;
+        }
+
         const message = {
             id: Date.now(),
             user: staffStatus.user || 'Staff',
@@ -596,6 +717,38 @@ io.on('connection', (socket) => {
             ticket.assignee = a || null;
         }
 
+        ticket.updatedAt = new Date().toISOString();
+        broadcastAdminConversations();
+    });
+
+    socket.on('adminTicketClaim', ({ ticketId, force }) => {
+        if (!isStaff) return;
+        const id = safeText(ticketId, 32);
+        if (!id) return;
+        const ticket = tickets.get(id);
+        if (!ticket) return;
+
+        const user = staffStatus.user || 'Staff';
+        const wantsForce = Boolean(force);
+        if (ticket.claim && ticket.claim.user && ticket.claim.user !== user && !wantsForce) {
+            return;
+        }
+
+        ticket.claim = {
+            user,
+            at: new Date().toISOString()
+        };
+        ticket.updatedAt = new Date().toISOString();
+        broadcastAdminConversations();
+    });
+
+    socket.on('adminTicketClaimClear', ({ ticketId }) => {
+        if (!isStaff) return;
+        const id = safeText(ticketId, 32);
+        if (!id) return;
+        const ticket = tickets.get(id);
+        if (!ticket) return;
+        ticket.claim = null;
         ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
     });

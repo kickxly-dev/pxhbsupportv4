@@ -35,6 +35,16 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', handleAdminHotkeys);
 });
 
+function claimSelectedTicket(force) {
+    if (!selectedTicketId) return;
+    socket.emit('adminTicketClaim', { ticketId: selectedTicketId, force: Boolean(force) });
+}
+
+function releaseSelectedTicket() {
+    if (!selectedTicketId) return;
+    socket.emit('adminTicketClaimClear', { ticketId: selectedTicketId });
+}
+
 function filterChatList() {
     const q = (document.getElementById('chatSearch')?.value || '').toLowerCase();
     const list = Array.from(conversationsById.values());
@@ -171,7 +181,29 @@ function selectTicket(ticketId, el) {
         const status = t.status || 'open';
         const pri = t.priority || 'normal';
         const asg = t.assignee ? `@${t.assignee}` : 'unassigned';
-        sub.textContent = `${status} • ${pri} • ${asg}`;
+        const claim = t.claim && t.claim.user ? `claimed by ${t.claim.user}` : 'unclaimed';
+        sub.textContent = `${status} • ${pri} • ${asg} • ${claim}`;
+    }
+
+    const agentViewEl = document.getElementById('ticketAgentView');
+    if (agentViewEl) {
+        const online = t.online ? 'online' : 'offline';
+        const lastSeen = t.lastSeenAt ? new Date(t.lastSeenAt).toLocaleString() : '—';
+        const path = t.agentView?.path || '—';
+        const ua = t.agentView?.ua || '—';
+        agentViewEl.textContent = `${online} • last seen ${lastSeen} • ${path} • ${ua}`;
+    }
+
+    const formEl = document.getElementById('ticketForm');
+    if (formEl) {
+        if (t.form && (t.form.issue || t.form.desc)) {
+            const issue = t.form.issue || 'other';
+            const desc = t.form.desc || '';
+            const at = t.form.submittedAt ? new Date(t.form.submittedAt).toLocaleString() : '';
+            formEl.textContent = `${issue}${at ? ` • ${at}` : ''} • ${desc}`;
+        } else {
+            formEl.textContent = '—';
+        }
     }
 
     const statusSel = document.getElementById('ticketStatus');
@@ -754,7 +786,21 @@ function renderChatMessages(messages) {
 
 function appendChatMessage(message) {
     if (!message) return;
+    if (message.image && message.image.dataUrl) {
+        addAdminImageMessage(message.image.dataUrl, message.type || 'user');
+        return;
+    }
     addAdminMessage(message.text || '', message.type || 'user');
+}
+
+function addAdminImageMessage(dataUrl, type) {
+    const chatMessages = document.getElementById('adminChatMessages');
+    if (!chatMessages) return;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.innerHTML = `<div class="message-content"><img class="message-image" src="${escapeHtml(String(dataUrl))}" alt="upload" /></div>`;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function escapeHtml(str) {
