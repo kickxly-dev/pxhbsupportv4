@@ -98,13 +98,30 @@ function emitAdminTyping(next) {
 
 function handleAdminHotkeys(event) {
     if (event.defaultPrevented) return;
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
 
     const activeEl = document.activeElement;
     const isChatInputFocused = activeEl && activeEl.id === 'adminChatInput';
     if (!isChatInputFocused) return;
 
     const key = String(event.key || '');
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+        if (key.toLowerCase() === 't') {
+            if (!selectedChat) return;
+            event.preventDefault();
+            exportTranscript(selectedChat, { mode: 'download' });
+            return;
+        }
+
+        if (key.toLowerCase() === 'c') {
+            if (!selectedChat) return;
+            event.preventDefault();
+            exportTranscript(selectedChat, { mode: 'copy' });
+            return;
+        }
+    }
+
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
 
     if (CANNED_RESPONSES[key]) {
         event.preventDefault();
@@ -115,20 +132,6 @@ function handleAdminHotkeys(event) {
             input.focus();
             emitAdminTyping(true);
         }
-        return;
-    }
-
-    if (key.toLowerCase() === 't') {
-        if (!selectedChat) return;
-        event.preventDefault();
-        exportTranscript(selectedChat, { mode: 'download' });
-        return;
-    }
-
-    if (key.toLowerCase() === 'c') {
-        if (!selectedChat) return;
-        event.preventDefault();
-        exportTranscript(selectedChat, { mode: 'copy' });
         return;
     }
 }
