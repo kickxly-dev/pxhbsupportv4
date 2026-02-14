@@ -215,6 +215,7 @@ io.on('connection', (socket) => {
         socket.join('admins');
         broadcastAdminConversations();
     } else {
+        socket.join(socket.id);
         conversations.set(socket.id, {
             name: `User ${socket.id.slice(0, 6)}`,
             connected: true,
@@ -228,8 +229,11 @@ io.on('connection', (socket) => {
         broadcastAdminConversations();
     }
     
-    // Send existing messages to new user
-    socket.emit('loadMessages', messages);
+    // Send existing messages to the connected user only (privacy)
+    if (!isStaff) {
+        const conv = conversations.get(socket.id);
+        socket.emit('loadMessages', conv?.messages || []);
+    }
 
     // Send current staff status immediately so UI is correct on first paint
     socket.emit('staffStatusUpdate', staffStatus);
@@ -281,7 +285,9 @@ io.on('connection', (socket) => {
             conv.messages.push(message);
             conv.unread += 1;
         }
-        io.emit('newMessage', message);
+        // Deliver only to the sender + admins
+        io.to(socket.id).emit('newMessage', message);
+        io.to('admins').emit('adminMessage', { socketId: socket.id, message });
         broadcastAdminConversations();
     });
 
