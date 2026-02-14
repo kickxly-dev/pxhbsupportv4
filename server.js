@@ -121,6 +121,15 @@ function allowLoginAttempt(ip) {
 // Real conversations (keyed by user socket id)
 const conversations = new Map();
 
+function findLastUserMessageId(conv) {
+    if (!conv || !Array.isArray(conv.messages)) return null;
+    for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
+        const m = conv.messages[i];
+        if (m && m.type === 'user' && m.id != null) return String(m.id);
+    }
+    return null;
+}
+
 function getConversationSummary(socketId) {
     const conv = conversations.get(socketId);
     if (!conv) return null;
@@ -300,7 +309,39 @@ io.on('connection', (socket) => {
         // Deliver only to the sender + admins
         io.to(socket.id).emit('newMessage', message);
         io.to('admins').emit('adminMessage', { socketId: socket.id, message });
+
+        if (staffSockets.size > 0) {
+            io.to(socket.id).emit('messageReceipt', {
+                socketId: socket.id,
+                id: message.id,
+                status: 'delivered',
+                at: new Date().toISOString()
+            });
+        }
         broadcastAdminConversations();
+    });
+
+    socket.on('userTyping', (payload) => {
+        if (isStaff) return;
+        const isTyping = Boolean(payload && payload.isTyping);
+        io.to('admins').emit('userTyping', {
+            socketId: socket.id,
+            isTyping,
+            at: Date.now()
+        });
+    });
+
+    socket.on('staffTyping', (payload) => {
+        if (!isStaff) return;
+        const socketId = payload && payload.socketId;
+        if (!socketId) return;
+        const isTyping = Boolean(payload && payload.isTyping);
+        io.to(socketId).emit('staffTyping', {
+            socketId,
+            isTyping,
+            user: staffStatus.user || null,
+            at: Date.now()
+        });
     });
 
     // Admin: request conversation list
@@ -315,12 +356,22 @@ io.on('connection', (socket) => {
         const conv = conversations.get(socketId);
         if (!conv) return;
         conv.unread = 0;
+        conv.lastSeenUserMessageId = findLastUserMessageId(conv);
         socket.emit('adminConversationMessages', {
             socketId,
             name: conv.name,
             connected: conv.connected,
             messages: conv.messages
         });
+
+        if (conv.lastSeenUserMessageId) {
+            io.to(socketId).emit('messageReceipt', {
+                socketId,
+                lastId: conv.lastSeenUserMessageId,
+                status: 'seen',
+                at: new Date().toISOString()
+            });
+        }
         broadcastAdminConversations();
     });
 

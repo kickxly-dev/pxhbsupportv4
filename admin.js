@@ -1,8 +1,17 @@
-﻿// P.X HB Admin Panel JavaScript
+// P.X HB Admin Panel JavaScript
 const socket = io();
 let currentSection = 'dashboard';
 let selectedChat = null;
 let conversationsById = new Map();
+
+let isAdminTyping = false;
+let adminTypingTimer = null;
+
+const CANNED_RESPONSES = {
+    '1': 'Thanks for reaching out — what’s your username and what happened?',
+    '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
+    '3': 'We’re on it. Typical response time is a few minutes — thanks for your patience.'
+};
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function () {
@@ -10,6 +19,14 @@ document.addEventListener('DOMContentLoaded', function () {
     loadDashboardData();
     setupSocketEvents();
     socket.emit('adminInit');
+
+    const input = document.getElementById('adminChatInput');
+    if (input) {
+        input.addEventListener('input', () => emitAdminTyping(true));
+        input.addEventListener('blur', () => emitAdminTyping(false));
+    }
+
+    document.addEventListener('keydown', handleAdminHotkeys);
 });
 
 function checkAuth() {
@@ -49,6 +66,71 @@ function setupSocketEvents() {
 
         updateStats();
     });
+
+    socket.on('userTyping', (payload) => {
+        const socketId = payload?.socketId;
+        const typing = Boolean(payload?.isTyping);
+        if (!socketId || !typing) return;
+        if (selectedChat && socketId === selectedChat) {
+            // Background signal only (no UI changes)
+            console.log('User typing:', socketId);
+        }
+    });
+}
+
+function emitAdminTyping(next) {
+    const wants = Boolean(next);
+    if (!selectedChat) return;
+
+    if (wants !== isAdminTyping) {
+        isAdminTyping = wants;
+        socket.emit('staffTyping', { socketId: selectedChat, isTyping: wants });
+    }
+
+    if (adminTypingTimer) clearTimeout(adminTypingTimer);
+    adminTypingTimer = setTimeout(() => {
+        if (isAdminTyping) {
+            isAdminTyping = false;
+            socket.emit('staffTyping', { socketId: selectedChat, isTyping: false });
+        }
+    }, 1200);
+}
+
+function handleAdminHotkeys(event) {
+    if (event.defaultPrevented) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+    const activeEl = document.activeElement;
+    const isChatInputFocused = activeEl && activeEl.id === 'adminChatInput';
+    if (!isChatInputFocused) return;
+
+    const key = String(event.key || '');
+
+    if (CANNED_RESPONSES[key]) {
+        event.preventDefault();
+        const input = document.getElementById('adminChatInput');
+        if (input) {
+            const base = CANNED_RESPONSES[key];
+            input.value = input.value ? `${input.value} ${base}` : base;
+            input.focus();
+            emitAdminTyping(true);
+        }
+        return;
+    }
+
+    if (key.toLowerCase() === 't') {
+        if (!selectedChat) return;
+        event.preventDefault();
+        exportTranscript(selectedChat, { mode: 'download' });
+        return;
+    }
+
+    if (key.toLowerCase() === 'c') {
+        if (!selectedChat) return;
+        event.preventDefault();
+        exportTranscript(selectedChat, { mode: 'copy' });
+        return;
+    }
 }
 
 // Navigation functions
@@ -129,6 +211,9 @@ function selectChat(socketId, el) {
     if (el) el.classList.add('selected');
 
     socket.emit('adminSelectConversation', { socketId });
+
+    isAdminTyping = false;
+    socket.emit('staffTyping', { socketId, isTyping: false });
 }
 
 function sendAdminMessage() {
@@ -138,6 +223,59 @@ function sendAdminMessage() {
 
     socket.emit('adminSendMessage', { socketId: selectedChat, text: message });
     if (input) input.value = '';
+
+    emitAdminTyping(false);
+}
+
+function buildTranscriptText(data) {
+    const name = data?.name ? String(data.name) : String(data?.socketId || 'Chat');
+    const list = Array.isArray(data?.messages) ? data.messages : [];
+
+    const lines = [];
+    lines.push(`P.X HB Transcript - ${name}`);
+    lines.push(`Chat ID: ${data?.socketId || ''}`);
+    lines.push(`Exported: ${new Date().toISOString()}`);
+    lines.push('');
+
+    list.forEach((m) => {
+        const at = m?.timestamp ? new Date(m.timestamp).toISOString() : '';
+        const who = m?.user ? String(m.user) : (m?.type === 'staff' ? 'Staff' : 'User');
+        const text = m?.text != null ? String(m.text) : '';
+        lines.push(`[${at}] ${who}: ${text}`);
+    });
+    lines.push('');
+    return lines.join('\n');
+}
+
+function downloadText(filename, text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+async function exportTranscript(socketId, { mode }) {
+    try {
+        const res = await fetch(`/api/admin/transcript/${encodeURIComponent(String(socketId))}`);
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        const text = buildTranscriptText(data);
+
+        if (mode === 'copy') {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const safeName = String(data?.name || socketId).replace(/[^a-z0-9_-]+/gi, '_').slice(0, 40);
+        downloadText(`pxhb_transcript_${safeName}.txt`, text);
+    } catch (err) {
+        console.warn('Transcript export failed', err);
+    }
 }
 
 function addAdminMessage(text, type) {

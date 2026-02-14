@@ -1,4 +1,4 @@
-﻿// P.X HB Support - Main JavaScript
+// P.X HB Support - Main JavaScript
 const socket = io();
 let isSendingMessage = false;
 let lastMessageTime = 0;
@@ -30,8 +30,27 @@ document.addEventListener('DOMContentLoaded', function () {
         updateStaffStatus(status);
     });
 
+    socket.on('staffTyping', (payload) => {
+        updateStaffTyping(Boolean(payload && payload.isTyping), payload?.user || null);
+    });
+
+    socket.on('messageReceipt', (payload) => {
+        handleMessageReceipt(payload);
+    });
+
     // Check for existing staff session
     checkStaffSession();
+
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.addEventListener('input', () => {
+            emitTypingState(true);
+        });
+
+        input.addEventListener('blur', () => {
+            emitTypingState(false);
+        });
+    }
 });
 
 // Chat functions
@@ -118,6 +137,23 @@ function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
     }
+}
+
+function emitTypingState(next) {
+    const wantsTyping = Boolean(next);
+
+    if (wantsTyping !== isTyping) {
+        isTyping = wantsTyping;
+        socket.emit('userTyping', { clientId, isTyping: wantsTyping });
+    }
+
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        if (isTyping) {
+            isTyping = false;
+            socket.emit('userTyping', { clientId, isTyping: false });
+        }
+    }, 1200);
 }
 
 function escapeHtml(str) {
@@ -212,17 +248,43 @@ function updateStaffUI() {
 
 function updateStaffStatus(status) {
     const statusDot = document.querySelector('.status-dot');
-    const statusText = document.querySelector('.chat-status span');
+    const statusText = document.querySelector('.chat-status span:last-child');
 
     if (!statusDot || !statusText) return;
 
     if (status?.isOnline) {
         statusDot.style.background = 'var(--success)';
-        statusText.textContent = `${status.user} - Online`;
+        defaultStatusLabel = `${status.user} - Online`;
+        statusText.textContent = defaultStatusLabel;
     } else {
         statusDot.style.background = 'var(--warning)';
-        statusText.textContent = 'Support Team - Offline';
+        defaultStatusLabel = 'Support Team - Offline';
+        statusText.textContent = defaultStatusLabel;
     }
+}
+
+function updateStaffTyping(isStaffTypingNow, staffUser) {
+    const statusText = document.querySelector('.chat-status span:last-child');
+    if (!statusText) return;
+
+    if (staffTypingTimer) clearTimeout(staffTypingTimer);
+
+    if (isStaffTypingNow) {
+        const who = staffUser ? String(staffUser) : 'Support';
+        statusText.textContent = `${who} is typing...`;
+        staffTypingTimer = setTimeout(() => {
+            statusText.textContent = defaultStatusLabel;
+        }, 1600);
+    } else {
+        statusText.textContent = defaultStatusLabel;
+    }
+}
+
+function handleMessageReceipt(payload) {
+    const status = String(payload?.status || '').toLowerCase();
+    if (!status) return;
+    // No UI changes: background signal only
+    console.log('Message receipt:', status, payload);
 }
 
 function showNotification(message, type) {
