@@ -426,12 +426,25 @@ nav:hover {
     align-items: center;
 }
 
+.chat-header-info {
+    min-width: 0;
+}
+
 .chat-status {
     display: flex;
     align-items: center;
     gap: 8px;
     color: white;
     font-weight: 600;
+    min-width: 0;
+}
+
+.chat-status span:last-child {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .status-dot {
