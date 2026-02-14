@@ -42,7 +42,8 @@ function isAdminSocketHandshake(socket) {
     const ref = (socket && socket.handshake && socket.handshake.headers && socket.handshake.headers.referer) || '';
     const authAdmin = Boolean(socket && socket.handshake && socket.handshake.auth && socket.handshake.auth.admin);
     try {
-        return authAdmin && String(ref).includes('/admin');
+        const isAdminRef = String(ref).includes('/admin');
+        return authAdmin || isAdminRef;
     } catch {
         return false;
     }
