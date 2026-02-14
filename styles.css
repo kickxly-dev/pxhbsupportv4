@@ -22,8 +22,8 @@
 /* Embedded support layout */
 .support-layout {
     display: grid;
-    grid-template-columns: 1.05fr 0.95fr;
-    gap: 22px;
+    grid-template-columns: 1fr;
+    gap: 18px;
     align-items: start;
 }
 
@@ -33,6 +33,9 @@
 
 .support-right {
     position: relative;
+    width: 100%;
+    max-width: 980px;
+    margin: 22px auto 0;
 }
 
 .support-left,
