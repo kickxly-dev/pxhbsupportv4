@@ -4,6 +4,10 @@ let currentSection = 'dashboard';
 let selectedChat = null;
 let conversationsById = new Map();
 
+let ticketsById = new Map();
+let selectedTicketId = null;
+let ticketFilter = 'open';
+
 let isAdminTyping = false;
 let adminTypingTimer = null;
 
@@ -30,6 +34,180 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
+
+function filterChatList() {
+    const q = (document.getElementById('chatSearch')?.value || '').toLowerCase();
+    const list = Array.from(conversationsById.values());
+    const filtered = q
+        ? list.filter((c) =>
+              String(c?.name || '').toLowerCase().includes(q) || String(c?.socketId || '').toLowerCase().includes(q)
+          )
+        : list;
+    renderChatList(filtered);
+}
+
+function saveConversationMeta() {
+    if (!selectedChat) return;
+    const conv = conversationsById.get(selectedChat);
+    if (!conv) return;
+    const tagsRaw = document.getElementById('chatTags')?.value || '';
+    const notes = document.getElementById('chatNotes')?.value || '';
+    const tags = String(tagsRaw)
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 20);
+    socket.emit('adminUpdateConversation', { socketId: selectedChat, tags, notes });
+}
+
+function muteSelectedChat(minutes) {
+    if (!selectedChat) return;
+    const ms = Math.max(0, Math.min(Number(minutes || 0), 60 * 24 * 7)) * 60 * 1000;
+    socket.emit('adminModerationAction', { socketId: selectedChat, action: 'mute', durationMs: ms });
+}
+
+function unmuteSelectedChat() {
+    if (!selectedChat) return;
+    socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unmute' });
+}
+
+function banSelectedChat() {
+    if (!selectedChat) return;
+    socket.emit('adminModerationAction', { socketId: selectedChat, action: 'ban' });
+}
+
+function unbanSelectedChat() {
+    if (!selectedChat) return;
+    socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unban' });
+}
+
+function insertCanned() {
+    const select = document.getElementById('cannedSelect');
+    const input = document.getElementById('adminChatInput');
+    if (!select || !input) return;
+    const val = String(select.value || '');
+    if (!val) return;
+    input.value = input.value ? `${input.value} ${val}` : val;
+    input.focus();
+    emitAdminTyping(true);
+    select.value = '';
+}
+
+function filterTicketList() {
+    const q = (document.getElementById('ticketSearch')?.value || '').toLowerCase();
+    const list = Array.from(ticketsById.values());
+    const filtered = q
+        ? list.filter((t) =>
+              String(t?.id || '').toLowerCase().includes(q) ||
+              String(t?.name || '').toLowerCase().includes(q) ||
+              String(t?.socketId || '').toLowerCase().includes(q)
+          )
+        : list;
+    renderTicketList(filtered);
+}
+
+function setTicketFilter(next, btn) {
+    ticketFilter = String(next || 'open');
+    document.querySelectorAll('.ticket-filters .filter-btn').forEach((b) => b.classList.remove('active'));
+    if (btn && btn.classList) btn.classList.add('active');
+    renderTicketList(Array.from(ticketsById.values()));
+}
+
+function renderTicketList(list) {
+    const el = document.getElementById('ticketItems');
+    if (!el) return;
+    const arr = Array.isArray(list) ? list : [];
+    const filtered = arr.filter((t) => {
+        if (ticketFilter === 'all') return true;
+        return String(t?.status || 'open') === ticketFilter;
+    });
+
+    el.innerHTML = filtered
+        .map((t) => {
+            const name = escapeHtml(String(t?.name || t?.socketId || ''));
+            const id = escapeHtml(String(t?.id || ''));
+            const preview = escapeHtml(String(t?.lastText || ''));
+            const status = escapeHtml(String(t?.status || 'open'));
+            const priority = escapeHtml(String(t?.priority || 'normal'));
+            const assignee = escapeHtml(String(t?.assignee || ''));
+            const timeText = t?.updatedAt ? new Date(t.updatedAt).toLocaleTimeString() : '';
+            const unread = Number(t?.unread || 0);
+            const right = unread > 0 ? `${unread}` : escapeHtml(timeText);
+            const selectedClass = selectedTicketId === t.id ? 'selected' : '';
+            return `
+        <div class="ticket-item ${selectedClass}" data-ticket-id="${id}" onclick="selectTicket('${id}', this)">
+            <div class="ticket-item-header">
+                <span>${id} - ${name}</span>
+                <span class="chat-time">${right}</span>
+            </div>
+            <div class="ticket-meta">
+                <span class="ticket-pill">${status}</span>
+                <span class="ticket-pill">${priority}</span>
+                ${assignee ? `<span class=\"ticket-pill\">@${assignee}</span>` : ''}
+            </div>
+            <div class="chat-preview">${preview}</div>
+        </div>`;
+        })
+        .join('');
+}
+
+function selectTicket(ticketId, el) {
+    const id = String(ticketId || '');
+    if (!id) return;
+    selectedTicketId = id;
+    document.querySelectorAll('.ticket-item').forEach((item) => item.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+
+    const t = ticketsById.get(id);
+    if (!t) return;
+
+    const body = document.getElementById('ticketDetailBody');
+    if (body) body.style.display = 'block';
+
+    const title = document.getElementById('ticketTitle');
+    const sub = document.getElementById('ticketSubtitle');
+    if (title) title.textContent = `${t.id} - ${t.name || t.socketId}`;
+    if (sub) {
+        const status = t.status || 'open';
+        const pri = t.priority || 'normal';
+        const asg = t.assignee ? `@${t.assignee}` : 'unassigned';
+        sub.textContent = `${status} • ${pri} • ${asg}`;
+    }
+
+    const statusSel = document.getElementById('ticketStatus');
+    const priSel = document.getElementById('ticketPriority');
+    const asgInput = document.getElementById('ticketAssignee');
+    if (statusSel) statusSel.value = String(t.status || 'open');
+    if (priSel) priSel.value = String(t.priority || 'normal');
+    if (asgInput) asgInput.value = String(t.assignee || '');
+}
+
+function saveTicketEdits() {
+    if (!selectedTicketId) return;
+    const t = ticketsById.get(selectedTicketId);
+    if (!t) return;
+    const status = document.getElementById('ticketStatus')?.value;
+    const priority = document.getElementById('ticketPriority')?.value;
+    const assignee = document.getElementById('ticketAssignee')?.value;
+    socket.emit('adminTicketUpdate', { ticketId: selectedTicketId, status, priority, assignee });
+}
+
+function ticketQuickSet(status) {
+    const sel = document.getElementById('ticketStatus');
+    if (sel) sel.value = String(status);
+    saveTicketEdits();
+}
+
+function openLinkedChatFromTicket() {
+    if (!selectedTicketId) return;
+    const t = ticketsById.get(selectedTicketId);
+    if (!t || !t.socketId) return;
+    const btn = document.querySelector('.admin-nav .admin-btn:nth-child(2)');
+    showChats(btn);
+    const socketId = String(t.socketId);
+    const item = document.querySelector(`.chat-item[data-socket-id="${CSS.escape(socketId)}"]`);
+    selectChat(socketId, item);
+}
 
 function checkAuth() {
     const staffUser = sessionStorage.getItem('staffUser');
@@ -77,6 +255,12 @@ function setupSocketEvents() {
             // Background signal only (no UI changes)
             console.log('User typing:', socketId);
         }
+    });
+
+    socket.on('adminTickets', (list) => {
+        const arr = Array.isArray(list) ? list : [];
+        ticketsById = new Map(arr.map((t) => [t.id, t]));
+        renderTicketList(arr);
     });
 }
 
@@ -161,6 +345,11 @@ function showDashboard(btn) {
 function showChats(btn) {
     switchSection('chats', btn);
     loadChatList();
+}
+
+function showTickets(btn) {
+    switchSection('tickets', btn);
+    socket.emit('adminInit');
 }
 
 function showSettings(btn) {
@@ -327,6 +516,51 @@ function handleSlashCommand(raw) {
         const existing = conv?.notes ? String(conv.notes) : '';
         const next = existing ? `${existing}\n${rest}` : rest;
         socket.emit('adminUpdateConversation', { socketId: selectedChat, tags: conv?.tags || [], notes: next });
+        return true;
+    }
+
+    if (cmd === 'ticket') {
+        return handleTicketCommand(tokens);
+    }
+
+    return false;
+}
+
+function handleTicketCommand(tokens) {
+    const conv = conversationsById.get(selectedChat);
+    const ticketId = conv?.ticket?.id;
+    if (!ticketId) {
+        console.warn('No ticket for this conversation yet.');
+        return true;
+    }
+
+    const sub = String(tokens[0] || '').toLowerCase();
+    const arg = tokens.slice(1).join(' ');
+
+    if (!sub || sub === 'status') {
+        console.log('Ticket:', conv.ticket);
+        return true;
+    }
+
+    if (sub === 'close') {
+        socket.emit('adminTicketUpdate', { ticketId, status: 'closed' });
+        return true;
+    }
+    if (sub === 'reopen' || sub === 'open') {
+        socket.emit('adminTicketUpdate', { ticketId, status: 'open' });
+        return true;
+    }
+    if (sub === 'pending') {
+        socket.emit('adminTicketUpdate', { ticketId, status: 'pending' });
+        return true;
+    }
+    if (sub === 'priority') {
+        const p = String(arg || '').toLowerCase();
+        socket.emit('adminTicketUpdate', { ticketId, priority: p });
+        return true;
+    }
+    if (sub === 'assign') {
+        socket.emit('adminTicketUpdate', { ticketId, assignee: String(arg || '') });
         return true;
     }
 

@@ -25,6 +25,10 @@
                     <i class="fas fa-comments"></i>
                     Chats
                 </button>
+                <button class="admin-btn" onclick="showTickets(this)">
+                    <i class="fas fa-ticket"></i>
+                    Tickets
+                </button>
                 <button class="admin-btn" onclick="showSettings(this)">
                     <i class="fas fa-cog"></i>
                     Settings
@@ -114,6 +118,68 @@
                             <button onclick="sendAdminMessage()">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tickets Section -->
+            <section class="admin-section" id="tickets">
+                <h2 class="section-title">🎫 Tickets</h2>
+                <div class="ticket-container">
+                    <div class="ticket-list" id="adminTicketList">
+                        <div class="admin-tools">
+                            <input type="text" id="ticketSearch" placeholder="Search tickets..." oninput="filterTicketList()">
+                        </div>
+                        <div class="ticket-filters">
+                            <button class="filter-btn active" onclick="setTicketFilter('open', this)">Open</button>
+                            <button class="filter-btn" onclick="setTicketFilter('pending', this)">Pending</button>
+                            <button class="filter-btn" onclick="setTicketFilter('closed', this)">Closed</button>
+                            <button class="filter-btn" onclick="setTicketFilter('all', this)">All</button>
+                        </div>
+                        <div class="ticket-items" id="ticketItems"></div>
+                    </div>
+
+                    <div class="ticket-detail" id="ticketDetail">
+                        <div class="welcome-message">
+                            <p>Select a ticket to view details</p>
+                        </div>
+                        <div class="ticket-detail-body" id="ticketDetailBody" style="display:none;">
+                            <div class="ticket-detail-header">
+                                <div class="ticket-title" id="ticketTitle"></div>
+                                <div class="ticket-subtitle" id="ticketSubtitle"></div>
+                            </div>
+                            <div class="ticket-fields">
+                                <div class="tool-row">
+                                    <label>Status</label>
+                                    <select id="ticketStatus" onchange="saveTicketEdits()">
+                                        <option value="open">open</option>
+                                        <option value="pending">pending</option>
+                                        <option value="closed">closed</option>
+                                    </select>
+                                </div>
+                                <div class="tool-row">
+                                    <label>Priority</label>
+                                    <select id="ticketPriority" onchange="saveTicketEdits()">
+                                        <option value="low">low</option>
+                                        <option value="normal">normal</option>
+                                        <option value="high">high</option>
+                                        <option value="urgent">urgent</option>
+                                    </select>
+                                </div>
+                                <div class="tool-row">
+                                    <label>Assignee</label>
+                                    <input type="text" id="ticketAssignee" placeholder="(optional)" onblur="saveTicketEdits()">
+                                </div>
+                                <div class="tool-row tool-actions ticket-actions">
+                                    <button class="tool-btn" onclick="ticketQuickSet('open')">Reopen</button>
+                                    <button class="tool-btn" onclick="ticketQuickSet('pending')">Pending</button>
+                                    <button class="tool-btn danger" onclick="ticketQuickSet('closed')">Close</button>
+                                </div>
+                                <div class="tool-row">
+                                    <button class="tool-btn" onclick="openLinkedChatFromTicket()">Open Linked Chat</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

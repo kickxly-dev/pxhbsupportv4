@@ -134,6 +134,59 @@ function allowLoginAttempt(ip) {
 // Real conversations (keyed by user socket id)
 const conversations = new Map();
 
+let nextTicketNumber = 1000;
+const tickets = new Map();
+
+function ensureTicketForConversation(socketId) {
+    const conv = conversations.get(socketId);
+    if (!conv) return null;
+    if (conv.ticketId && tickets.has(conv.ticketId)) return tickets.get(conv.ticketId);
+
+    const id = `T-${nextTicketNumber++}`;
+    const ticket = {
+        id,
+        socketId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'open',
+        priority: 'normal',
+        assignee: null
+    };
+    tickets.set(id, ticket);
+    conv.ticketId = id;
+    return ticket;
+}
+
+function getTicketSummary(ticket) {
+    if (!ticket) return null;
+    const conv = conversations.get(ticket.socketId);
+    return {
+        id: ticket.id,
+        socketId: ticket.socketId,
+        status: ticket.status,
+        priority: ticket.priority,
+        assignee: ticket.assignee,
+        createdAt: ticket.createdAt,
+        updatedAt: ticket.updatedAt,
+        name: conv?.name || null,
+        lastText: conv?.messages?.length ? conv.messages[conv.messages.length - 1].text : '',
+        lastAt: conv?.messages?.length ? conv.messages[conv.messages.length - 1].timestamp : null,
+        unread: conv?.unread || 0
+    };
+}
+
+function broadcastAdminTickets() {
+    const list = Array.from(tickets.values())
+        .map(getTicketSummary)
+        .filter(Boolean)
+        .sort((a, b) => {
+            const atA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+            const atB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+            return atB - atA;
+        });
+    io.to('admins').emit('adminTickets', list);
+}
+
 function findLastUserMessageId(conv) {
     if (!conv || !Array.isArray(conv.messages)) return null;
     for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
@@ -146,6 +199,7 @@ function findLastUserMessageId(conv) {
 function getConversationSummary(socketId) {
     const conv = conversations.get(socketId);
     if (!conv) return null;
+    const ticket = conv.ticketId ? tickets.get(conv.ticketId) : null;
     return {
         socketId,
         name: conv.name,
@@ -155,6 +209,16 @@ function getConversationSummary(socketId) {
         mutedUntil: conv.mutedUntil || null,
         banned: Boolean(conv.banned),
         verified: Boolean(conv.verified),
+        ticket: ticket
+            ? {
+                  id: ticket.id,
+                  status: ticket.status,
+                  priority: ticket.priority,
+                  assignee: ticket.assignee,
+                  createdAt: ticket.createdAt,
+                  updatedAt: ticket.updatedAt
+              }
+            : null,
         lastText: conv.messages.length ? conv.messages[conv.messages.length - 1].text : '',
         lastAt: conv.messages.length ? conv.messages[conv.messages.length - 1].timestamp : null,
         unread: conv.unread
@@ -171,6 +235,7 @@ function broadcastAdminConversations() {
             return atB - atA;
         });
     io.to('admins').emit('adminConversations', list);
+    broadcastAdminTickets();
 }
 
 // Serve main site
@@ -269,6 +334,10 @@ io.on('connection', (socket) => {
     // Send existing messages to the connected user only (privacy)
     if (!isStaff) {
         const conv = conversations.get(socket.id);
+
+        if (conv) {
+            ensureTicketForConversation(socket.id);
+        }
         socket.emit('loadMessages', conv?.messages || []);
     }
 
@@ -407,6 +476,7 @@ io.on('connection', (socket) => {
     socket.on('adminInit', () => {
         if (!isStaff) return;
         broadcastAdminConversations();
+        broadcastAdminTickets();
     });
 
     // Admin: select conversation
@@ -421,6 +491,7 @@ io.on('connection', (socket) => {
             socketId,
             name: conv.name,
             connected: conv.connected,
+            ticket: conv.ticketId ? tickets.get(conv.ticketId) : null,
             messages: conv.messages
         });
 
@@ -485,6 +556,36 @@ io.on('connection', (socket) => {
         if (notes != null) {
             conv.notes = String(notes).slice(0, 2000);
         }
+        broadcastAdminConversations();
+    });
+
+    socket.on('adminTicketUpdate', ({ ticketId, status, priority, assignee }) => {
+        if (!isStaff) return;
+        const id = safeText(ticketId, 32);
+        if (!id) return;
+        const ticket = tickets.get(id);
+        if (!ticket) return;
+
+        if (status != null) {
+            const s = String(status).toLowerCase();
+            if (s === 'open' || s === 'closed' || s === 'pending') {
+                ticket.status = s;
+            }
+        }
+
+        if (priority != null) {
+            const p = String(priority).toLowerCase();
+            if (p === 'low' || p === 'normal' || p === 'high' || p === 'urgent') {
+                ticket.priority = p;
+            }
+        }
+
+        if (assignee !== undefined) {
+            const a = safeText(assignee, 40);
+            ticket.assignee = a || null;
+        }
+
+        ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
     });
 

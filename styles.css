@@ -1487,6 +1487,129 @@ nav:hover {
     transform: translateY(-2px);
 }
 
+.ticket-container {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    min-height: clamp(520px, 70vh, 720px);
+}
+
+.ticket-list {
+    background: rgba(11, 11, 13, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ticket-filters {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 106, 0, 0.14);
+    background: rgba(11, 11, 13, 0.62);
+}
+
+.filter-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, rgba(255, 106, 0, 0.22), rgba(255, 138, 42, 0.10));
+    border-color: rgba(255, 106, 0, 0.28);
+}
+
+.ticket-items {
+    overflow-y: auto;
+}
+
+.ticket-item {
+    padding: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.ticket-item:hover {
+    background: rgba(255, 106, 0, 0.06);
+}
+
+.ticket-item.selected {
+    background: rgba(255, 106, 0, 0.10);
+}
+
+.ticket-item-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+
+.ticket-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.ticket-pill {
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+}
+
+.ticket-detail {
+    background: rgba(11, 11, 13, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    min-height: 420px;
+}
+
+.ticket-detail-body {
+    padding: 16px;
+}
+
+.ticket-detail-header {
+    display: grid;
+    gap: 6px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 14px;
+}
+
+.ticket-title {
+    font-weight: 900;
+    font-size: 1.1rem;
+}
+
+.ticket-subtitle {
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.ticket-fields {
+    display: grid;
+    gap: 12px;
+}
+
+.ticket-actions {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .settings-container {
     display: grid;
     grid-template-columns: 1fr;
@@ -1551,6 +1674,11 @@ nav:hover {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .chat-container {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .ticket-container {
         grid-template-columns: 1fr;
         min-height: auto;
     }
