@@ -108,6 +108,20 @@ function handleAdminHotkeys(event) {
     const key = String(event.key || '');
 
     if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+        if (key === '1' || key === '2' || key === '3') {
+            const idx = Number(key) - 1;
+            const suggestion = lastSmartReplies[idx];
+            if (!suggestion) return;
+            event.preventDefault();
+            const input = document.getElementById('adminChatInput');
+            if (input) {
+                input.value = input.value ? `${input.value} ${suggestion}` : suggestion;
+                input.focus();
+                emitAdminTyping(true);
+            }
+            return;
+        }
+
         if (key.toLowerCase() === 't') {
             if (!selectedChat) return;
             event.preventDefault();
@@ -119,20 +133,6 @@ function handleAdminHotkeys(event) {
             if (!selectedChat) return;
             event.preventDefault();
             exportTranscript(selectedChat, { mode: 'copy' });
-            return;
-        }
-
-        if (key === '1' || key === '2' || key === '3') {
-            const idx = Number(key) - 1;
-            const suggestion = lastSmartReplies && lastSmartReplies[idx];
-            if (!suggestion) return;
-            event.preventDefault();
-            const input = document.getElementById('adminChatInput');
-            if (input) {
-                input.value = input.value ? `${input.value} ${suggestion}` : String(suggestion);
-                input.focus();
-                emitAdminTyping(true);
-            }
             return;
         }
     }
@@ -249,17 +249,6 @@ function sendAdminMessage() {
         }
     }
 
-    const conv = conversationsById.get(selectedChat);
-    const me = sessionStorage.getItem('staffUser');
-    if (conv?.claimedBy && me && String(conv.claimedBy) !== String(me)) {
-        console.warn('Ticket is claimed by another staff member:', conv.claimedBy);
-        return;
-    }
-    if (!conv?.claimedBy) {
-        console.warn('Ticket is unclaimed. Use /claim first.');
-        return;
-    }
-
     socket.emit('adminSendMessage', { socketId: selectedChat, text: message });
     if (input) input.value = '';
 
@@ -284,6 +273,16 @@ function handleSlashCommand(raw) {
         return true;
     }
 
+    if (cmd === 'smart') {
+        smartRepliesForSelectedChat();
+        return true;
+    }
+
+    if (cmd === 'verify') {
+        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'verify' });
+        return true;
+    }
+
     if (cmd === 'unmute') {
         socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unmute' });
         return true;
@@ -301,31 +300,6 @@ function handleSlashCommand(raw) {
 
     if (cmd === 'close') {
         socket.emit('adminModerationAction', { socketId: selectedChat, action: 'disconnect' });
-        return true;
-    }
-
-    if (cmd === 'claim') {
-        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'claim' });
-        return true;
-    }
-
-    if (cmd === 'unclaim') {
-        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unclaim' });
-        return true;
-    }
-
-    if (cmd === 'verify') {
-        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'verify' });
-        return true;
-    }
-
-    if (cmd === 'unverify') {
-        socket.emit('adminModerationAction', { socketId: selectedChat, action: 'unverify' });
-        return true;
-    }
-
-    if (cmd === 'smart') {
-        fetchSmartReplies(selectedChat);
         return true;
     }
 
@@ -359,18 +333,67 @@ function handleSlashCommand(raw) {
     return false;
 }
 
-async function fetchSmartReplies(socketId) {
+async function smartRepliesForSelectedChat() {
+    if (!selectedChat) return;
     try {
-        if (!socketId) return;
-        const res = await fetch(`/api/admin/smart-replies/${encodeURIComponent(String(socketId))}`);
+        const res = await fetch(`/api/admin/transcript/${encodeURIComponent(String(selectedChat))}`);
         if (!res.ok) throw new Error('failed');
         const data = await res.json();
-        const list = Array.isArray(data?.replies) ? data.replies : [];
-        lastSmartReplies = list.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 3);
-        console.log('Smart replies:', lastSmartReplies);
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        const suggestions = generateSmartReplies(messages);
+        lastSmartReplies = suggestions;
+        console.log('Smart replies:', suggestions);
+        console.log('Use Ctrl+Shift+1/2/3 to insert a suggestion into the input.');
     } catch (err) {
         console.warn('Smart replies failed', err);
     }
+}
+
+function generateSmartReplies(messages) {
+    const list = Array.isArray(messages) ? messages : [];
+    const lastUser = [...list].reverse().find((m) => (m?.type || '').toLowerCase() === 'user' && m?.text);
+    const text = String(lastUser?.text || '').toLowerCase();
+
+    const out = [];
+    if (!text) {
+        out.push('Thanks for reaching out — what can I help you with today?');
+        out.push('Can you share your username and what happened?');
+        out.push('What device/browser are you using?');
+        return out;
+    }
+
+    if (/(ban|banned|mute|muted)/.test(text)) {
+        out.push('I can help with that. What’s your username and what message did you receive?');
+        out.push('When did this start happening, and were you doing anything right before it happened?');
+        out.push('If you have a screenshot, please send it and I’ll review it.');
+        return out;
+    }
+
+    if (/(payment|paid|charge|charged|refund|billing)/.test(text)) {
+        out.push('Can you share your order/payment email (or last 4) and the date of the charge?');
+        out.push('What platform did you pay on (card/PayPal/etc.) and do you have a receipt screenshot?');
+        out.push('I’m checking this now — thanks for your patience.');
+        return out;
+    }
+
+    if (/(login|sign in|cant log|can\x27t log|password|2fa|code)/.test(text)) {
+        out.push('What’s your username, and are you seeing any specific error message?');
+        out.push('Have you tried resetting your password and clearing cache/cookies?');
+        out.push('Tell me your device/browser and I’ll walk you through the quickest fix.');
+        return out;
+    }
+
+    if (/(bug|broken|error|crash|glitch)/.test(text)) {
+        out.push('Thanks — can you send a screenshot and your device/browser?');
+        out.push('What steps cause it to happen so I can reproduce it?');
+        out.push('I’m taking a look now.');
+        return out;
+    }
+
+    out.push('Thanks — what’s your username and what happened?');
+    out.push('Can you send a screenshot and your device/browser?');
+    out.push('We’re on it — typical response time is a few minutes.');
+    return out;
 }
 
 function buildTranscriptText(data) {
@@ -466,25 +489,13 @@ function renderChatList(list) {
             const preview = escapeHtml(String(c.lastText || ''));
             const name = escapeHtml(String(c.name || c.socketId));
             const unread = Number(c.unread || 0);
-
-            const claimedBy = c.claimedBy ? escapeHtml(String(c.claimedBy)) : '';
-            const isVerified = Boolean(c.verified);
-            const badges = [
-                isVerified ? '<span class="ticket-badge verified">VERIFIED</span>' : '',
-                claimedBy
-                    ? `<span class="ticket-badge claimed">CLAIMED: ${claimedBy}</span>`
-                    : '<span class="ticket-badge unclaimed">UNCLAIMED</span>'
-            ]
-                .filter(Boolean)
-                .join('');
-
-            const right = unread > 0 ? `<span class="chat-time">${unread}</span>` : `<span class="chat-time">${escapeHtml(timeText)}</span>`;
+            const right = unread > 0 ? `${unread}` : escapeHtml(timeText);
 
             return `
         <div class="chat-item" data-socket-id="${escapeHtml(String(c.socketId))}" onclick="selectChat('${escapeHtml(String(c.socketId))}', this)">
             <div class="chat-item-header">
                 <span class="chat-user">${name}${c.connected ? '' : ' (disconnected)'}</span>
-                <span class="ticket-badges">${badges}${right}</span>
+                <span class="chat-time">${right}</span>
             </div>
             <div class="chat-preview">${preview}</div>
         </div>`;
