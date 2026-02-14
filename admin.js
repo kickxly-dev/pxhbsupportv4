@@ -1,5 +1,5 @@
 // P.X HB Admin Panel JavaScript
-const socket = io();
+const socket = io({ auth: { admin: true } });
 let currentSection = 'dashboard';
 let selectedChat = null;
 let conversationsById = new Map();

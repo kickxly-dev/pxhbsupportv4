@@ -40,8 +40,9 @@ function isStaffFromCookieHeader(cookieHeader) {
 
 function isAdminSocketHandshake(socket) {
     const ref = (socket && socket.handshake && socket.handshake.headers && socket.handshake.headers.referer) || '';
+    const authAdmin = Boolean(socket && socket.handshake && socket.handshake.auth && socket.handshake.auth.admin);
     try {
-        return String(ref).includes('/admin');
+        return authAdmin && String(ref).includes('/admin');
     } catch {
         return false;
     }
