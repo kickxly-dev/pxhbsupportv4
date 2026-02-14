@@ -12,7 +12,6 @@ let audioCtx = null;
 let audioUnlocked = false;
 
 let displayName = 'User';
-let hasName = false;
 
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const seenMessageIds = new Set();
@@ -57,9 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
     checkStaffSession();
 
     initDisplayName();
-    if (hasName) {
-        socket.emit('setUserName', { name: displayName });
-    }
+    socket.emit('setUserName', { name: displayName });
 
     const input = document.getElementById('chatInput');
     if (input) {
@@ -94,11 +91,6 @@ function sendMessage() {
     const message = (input?.value || '').trim();
     const currentTime = Date.now();
 
-    if (!hasName) {
-        showUsernameModal();
-        return;
-    }
-
     if (message && !isSendingMessage && (currentTime - lastMessageTime) > 600) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -124,11 +116,6 @@ function sendQuickMessage(message) {
     const msg = (message || '').trim();
     const currentTime = Date.now();
 
-    if (!hasName) {
-        showUsernameModal();
-        return;
-    }
-
     if (msg && !isSendingMessage && (currentTime - lastMessageTime) > 600) {
         isSendingMessage = true;
         lastMessageTime = currentTime;
@@ -152,38 +139,18 @@ function initDisplayName() {
     const stored = sessionStorage.getItem('pxhb_displayName');
     if (stored && String(stored).trim()) {
         displayName = String(stored).trim().slice(0, 40);
-        hasName = true;
         return;
     }
 
-    // No stored name: show modal UI
-    showUsernameModal();
-}
-
-function showUsernameModal() {
-    const modal = document.getElementById('usernameModal');
-    const form = document.getElementById('usernameForm');
-    const input = document.getElementById('usernameInput');
-    if (!modal || !form || !input) return;
-
-    modal.style.display = 'flex';
-    setTimeout(() => input.focus(), 50);
-
-    const handler = (event) => {
-        event.preventDefault();
-        const cleaned = String(input.value || '').trim().slice(0, 40);
-        if (!cleaned) return;
-        displayName = cleaned;
-        hasName = true;
-        sessionStorage.setItem('pxhb_displayName', displayName);
-        modal.style.display = 'none';
-        socket.emit('setUserName', { name: displayName });
-    };
-
-    // Ensure we don't double-bind
-    if (!form.dataset.bound) {
-        form.addEventListener('submit', handler);
-        form.dataset.bound = '1';
+    try {
+        const name = window.prompt('Choose a username for support chat:', '') || '';
+        const cleaned = String(name).trim().slice(0, 40);
+        if (cleaned) {
+            displayName = cleaned;
+            sessionStorage.setItem('pxhb_displayName', displayName);
+        }
+    } catch {
+        // ignore
     }
 }
 
