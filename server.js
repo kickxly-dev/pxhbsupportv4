@@ -163,6 +163,18 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+app.get('/api/admin/transcript/:socketId', (req, res) => {
+    if (!isStaffFromCookieHeader(req.headers.cookie)) {
+        return res.status(401).json({ error: 'unauthorized' });
+    }
+    const socketId = String(req.params.socketId || '').trim();
+    if (!socketId) return res.status(400).json({ error: 'missing socketId' });
+
+    const conv = conversations.get(socketId);
+    if (!conv) return res.status(404).json({ error: 'not_found' });
+    return res.json({ socketId, name: conv.name, messages: conv.messages || [] });
+});
+
 // API endpoints
 const staffLoginLimiter = rateLimit({
     windowMs: 60 * 1000,
