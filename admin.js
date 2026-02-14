@@ -240,6 +240,15 @@ function sendAdminMessage() {
     const message = (input?.value || '').trim();
     if (!message || !selectedChat) return;
 
+    if (message.startsWith('/')) {
+        const handled = handleSlashCommand(message);
+        if (handled) {
+            if (input) input.value = '';
+            emitAdminTyping(false);
+            return;
+        }
+    }
+
     const conv = conversationsById.get(selectedChat);
     const me = sessionStorage.getItem('staffUser');
     if (conv?.claimedBy && me && String(conv.claimedBy) !== String(me)) {
@@ -249,15 +258,6 @@ function sendAdminMessage() {
     if (!conv?.claimedBy) {
         console.warn('Ticket is unclaimed. Use /claim first.');
         return;
-    }
-
-    if (message.startsWith('/')) {
-        const handled = handleSlashCommand(message);
-        if (handled) {
-            if (input) input.value = '';
-            emitAdminTyping(false);
-            return;
-        }
     }
 
     socket.emit('adminSendMessage', { socketId: selectedChat, text: message });
