@@ -77,8 +77,33 @@
             <section class="admin-section" id="chats">
                 <h2 class="section-title">💬 Live Chats</h2>
                 <div class="chat-container">
-                    <div class="chat-list" id="adminChatList"></div>
+                    <div class="chat-list" id="adminChatList">
+                        <div class="admin-tools">
+                            <input type="text" id="chatSearch" placeholder="Search chats..." oninput="filterChatList()">
+                        </div>
+                    </div>
                     <div class="chat-window">
+                        <div class="admin-chat-tools" id="adminChatTools" style="display: none;">
+                            <div class="tool-row">
+                                <label>Tags</label>
+                                <input type="text" id="chatTags" placeholder="tag1, tag2" onblur="saveConversationMeta()">
+                            </div>
+                            <div class="tool-row">
+                                <label>Notes</label>
+                                <textarea id="chatNotes" placeholder="Internal notes..." onblur="saveConversationMeta()"></textarea>
+                            </div>
+                            <div class="tool-row tool-actions">
+                                <button class="tool-btn" onclick="muteSelectedChat(10)">Mute 10m</button>
+                                <button class="tool-btn" onclick="muteSelectedChat(60)">Mute 1h</button>
+                                <button class="tool-btn" onclick="unmuteSelectedChat()">Unmute</button>
+                                <button class="tool-btn danger" onclick="banSelectedChat()">Ban</button>
+                                <button class="tool-btn" onclick="unbanSelectedChat()">Unban</button>
+                            </div>
+                            <div class="tool-row">
+                                <label>Canned</label>
+                                <select id="cannedSelect" onchange="insertCanned()"></select>
+                            </div>
+                        </div>
                         <div class="chat-messages" id="adminChatMessages">
                             <div class="welcome-message">
                                 <p>Select a chat to start messaging</p>

@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,8 +25,17 @@ function isStaffFromCookieHeader(cookieHeader) {
     return cookies.pxhb_staff === '1';
 }
 
-function setStaffCookie(res) {
-    res.setHeader('Set-Cookie', 'pxhb_staff=1; Path=/; HttpOnly; SameSite=Lax');
+function isSecureRequest(req) {
+    const proto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
+    return req.secure || proto === 'https';
+}
+
+function setStaffCookie(res, req) {
+    const secure = req && isSecureRequest(req);
+    res.setHeader(
+        'Set-Cookie',
+        `pxhb_staff=1; Path=/; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`
+    );
 }
 
 function clearStaffCookie(res) {
@@ -32,6 +43,13 @@ function clearStaffCookie(res) {
 }
 
 // Middleware
+app.set('trust proxy', 1);
+app.use(
+    helmet({
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false
+    })
+);
 app.use((req, res, next) => {
     if (
         req.path === '/' ||
@@ -47,16 +65,57 @@ app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 
 // Staff credentials
-const STAFF_CREDENTIALS = {
-    'admin': 'pxhb2024',
-    'support': 'support123', 
-    'moderator': 'mod456'
-};
+function loadStaffCredentials() {
+    const raw = process.env.STAFF_CREDENTIALS_JSON;
+    if (raw) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (_) {}
+    }
+
+    const admin = process.env.STAFF_ADMIN_PASSWORD;
+    const support = process.env.STAFF_SUPPORT_PASSWORD;
+    const moderator = process.env.STAFF_MODERATOR_PASSWORD;
+    const anyEnv = admin || support || moderator;
+    if (anyEnv) {
+        return {
+            ...(admin ? { admin } : {}),
+            ...(support ? { support } : {}),
+            ...(moderator ? { moderator } : {})
+        };
+    }
+
+    return {
+        admin: 'pxhb2024',
+        support: 'support123',
+        moderator: 'mod456'
+    };
+}
+
+const STAFF_CREDENTIALS = loadStaffCredentials();
 
 // Store chat messages and staff status
 let messages = [];
 let staffStatus = { isOnline: false, user: null };
 const staffSockets = new Set();
+
+// Very small in-memory security limits
+const loginAttemptsByIp = new Map();
+function allowLoginAttempt(ip) {
+    const now = Date.now();
+    const key = String(ip || 'unknown');
+    const windowMs = 60_000;
+    const max = 10;
+    const rec = loginAttemptsByIp.get(key) || { count: 0, resetAt: now + windowMs };
+    if (now > rec.resetAt) {
+        rec.count = 0;
+        rec.resetAt = now + windowMs;
+    }
+    rec.count += 1;
+    loginAttemptsByIp.set(key, rec);
+    return rec.count <= max;
+}
 
 // Real conversations (keyed by user socket id)
 const conversations = new Map();
@@ -68,6 +127,10 @@ function getConversationSummary(socketId) {
         socketId,
         name: conv.name,
         connected: conv.connected,
+        tags: Array.isArray(conv.tags) ? conv.tags : [],
+        notes: conv.notes || '',
+        mutedUntil: conv.mutedUntil || null,
+        banned: Boolean(conv.banned),
         lastText: conv.messages.length ? conv.messages[conv.messages.length - 1].text : '',
         lastAt: conv.messages.length ? conv.messages[conv.messages.length - 1].timestamp : null,
         unread: conv.unread
@@ -100,6 +163,13 @@ app.get('/admin', (req, res) => {
 });
 
 // API endpoints
+const staffLoginLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 app.get('/api/stats', (req, res) => {
     res.json({
         activeUsers: Math.floor(Math.random() * 20) + 5,
@@ -108,10 +178,14 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
-app.post('/api/staff/login', (req, res) => {
+app.post('/api/staff/login', staffLoginLimiter, (req, res) => {
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress;
+    if (!allowLoginAttempt(ip)) {
+        return res.status(429).json({ success: false });
+    }
     const { username, password } = req.body || {};
     if (STAFF_CREDENTIALS[username] && STAFF_CREDENTIALS[username] === password) {
-        setStaffCookie(res);
+        setStaffCookie(res, req);
         return res.json({ success: true, user: username });
     }
     return res.status(401).json({ success: false });
@@ -144,7 +218,11 @@ io.on('connection', (socket) => {
             name: `User ${socket.id.slice(0, 6)}`,
             connected: true,
             unread: 0,
-            messages: []
+            messages: [],
+            tags: [],
+            notes: '',
+            mutedUntil: null,
+            banned: false
         });
         broadcastAdminConversations();
     }
@@ -158,6 +236,36 @@ io.on('connection', (socket) => {
     // Handle new messages
     socket.on('sendMessage', (data) => {
         if (isStaff) return;
+
+        const conv = conversations.get(socket.id);
+        if (conv?.banned) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'You have been banned from chat.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+        if (conv?.mutedUntil && Date.now() < Number(new Date(conv.mutedUntil))) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'You are currently muted. Please try again later.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+
+        // server-side spam limit per socket
+        const now = Date.now();
+        if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 400) return;
+        socket.data.lastMsgAt = now;
+
         const message = {
             id: data.id || Date.now(),
             user: data.user,
@@ -168,7 +276,6 @@ io.on('connection', (socket) => {
         };
         
         messages.push(message);
-        const conv = conversations.get(socket.id);
         if (conv) {
             conv.messages.push(message);
             conv.unread += 1;
@@ -205,6 +312,7 @@ io.on('connection', (socket) => {
         if (!socketId || !msgText) return;
         const conv = conversations.get(socketId);
         if (!conv) return;
+        if (conv.banned) return;
 
         const message = {
             id: Date.now(),
@@ -223,6 +331,49 @@ io.on('connection', (socket) => {
 
         // Update other admins
         io.to('admins').emit('adminMessage', { socketId, message });
+        broadcastAdminConversations();
+    });
+
+    socket.on('adminUpdateConversation', ({ socketId, tags, notes }) => {
+        if (!isStaff) return;
+        if (!socketId) return;
+        const conv = conversations.get(socketId);
+        if (!conv) return;
+
+        if (Array.isArray(tags)) {
+            conv.tags = tags
+                .map((t) => String(t || '').trim())
+                .filter(Boolean)
+                .slice(0, 20);
+        }
+        if (notes != null) {
+            conv.notes = String(notes).slice(0, 2000);
+        }
+        broadcastAdminConversations();
+    });
+
+    socket.on('adminModerationAction', ({ socketId, action, durationMs }) => {
+        if (!isStaff) return;
+        if (!socketId) return;
+        const conv = conversations.get(socketId);
+        if (!conv) return;
+
+        const act = String(action || '').toLowerCase();
+        if (act === 'mute') {
+            const ms = Math.max(0, Math.min(Number(durationMs || 0), 1000 * 60 * 60 * 24 * 7));
+            conv.mutedUntil = new Date(Date.now() + ms);
+        } else if (act === 'unmute') {
+            conv.mutedUntil = null;
+        } else if (act === 'ban') {
+            conv.banned = true;
+            // Disconnect the user immediately
+            io.to(socketId).disconnectSockets(true);
+        } else if (act === 'unban') {
+            conv.banned = false;
+        } else {
+            return;
+        }
+
         broadcastAdminConversations();
     });
     

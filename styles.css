@@ -968,7 +968,82 @@ nav:hover {
 .chat-container {
     display: grid;
     grid-template-columns: 320px 1fr;
-    gap: 14px;
+    gap: 20px;
+    height: 600px;
+}
+
+.admin-tools {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+    position: sticky;
+    top: 0;
+    background: rgba(26, 26, 26, 0.9);
+    backdrop-filter: blur(10px);
+    z-index: 2;
+}
+
+.admin-tools input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 53, 0.25);
+    background: rgba(10, 10, 10, 0.6);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.admin-chat-tools {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+    background: rgba(26, 26, 26, 0.7);
+}
+
+.admin-chat-tools .tool-row {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-chat-tools label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.admin-chat-tools input,
+.admin-chat-tools textarea,
+.admin-chat-tools select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    background: rgba(10, 10, 10, 0.55);
+    color: var(--text-primary);
+    outline: none;
+}
+
+.admin-chat-tools textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.admin-chat-tools .tool-actions {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.tool-btn {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.9), rgba(255, 140, 66, 0.9));
+}
+
+.tool-btn.danger {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.9), rgba(255, 107, 53, 0.9));
 }
 
 .chat-list {
