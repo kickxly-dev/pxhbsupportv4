@@ -53,6 +53,7 @@ app.use(
 app.use((req, res, next) => {
     if (
         req.path === '/' ||
+        req.path === '/admin' ||
         req.path.endsWith('.html') ||
         req.path.endsWith('.js') ||
         req.path.endsWith('.css')
