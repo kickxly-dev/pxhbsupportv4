@@ -15,6 +15,10 @@
     --warning: #ffff00;
 }
 
+.hero-subtitle {
+    max-width: 60ch;
+}
+
 /* Embedded support layout */
 .support-layout {
     display: grid;
@@ -29,6 +33,11 @@
 
 .support-right {
     position: relative;
+}
+
+.support-left,
+.support-right {
+    min-width: 0;
 }
 
 * {
@@ -111,6 +120,7 @@ nav:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 14px;
 }
 
 .nav-logo {
@@ -141,6 +151,8 @@ nav:hover {
     display: flex;
     gap: 30px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .nav-link {
@@ -390,7 +402,7 @@ nav:hover {
 /* Chat Widget */
 .chat-widget {
     width: 100%;
-    height: 520px;
+    height: clamp(420px, 70vh, 560px);
     background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
     border: 1px solid rgba(255, 107, 53, 0.3);
     border-radius: 20px;
@@ -463,6 +475,10 @@ nav:hover {
     padding: 20px;
     overflow-y: auto;
     background: rgba(10, 10, 10, 0.5);
+}
+
+.chat-messages {
+    min-height: 0;
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -810,10 +826,15 @@ nav:hover {
     
     .support-layout {
         grid-template-columns: 1fr;
+        gap: 18px;
     }
     
     .hero-title {
-        font-size: 2.5rem;
+        font-size: 2.25rem;
+    }
+
+    .hero {
+        padding: 96px 0 54px;
     }
     
     .hero-actions {
@@ -824,6 +845,18 @@ nav:hover {
     .chat-toggle-btn, .staff-login-btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .nav-links {
+        gap: 10px;
+    }
+
+    .nav-link {
+        display: none;
+    }
+
+    .admin-chat-tools .tool-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -969,7 +1002,7 @@ nav:hover {
     display: grid;
     grid-template-columns: 320px 1fr;
     gap: 20px;
-    height: 600px;
+    min-height: clamp(520px, 70vh, 720px);
 }
 
 .admin-tools {
@@ -998,6 +1031,9 @@ nav:hover {
     padding: 12px;
     border-bottom: 1px solid rgba(255, 107, 53, 0.2);
     background: rgba(26, 26, 26, 0.7);
+    position: sticky;
+    top: 0;
+    z-index: 3;
 }
 
 .admin-chat-tools .tool-row {
@@ -1030,6 +1066,10 @@ nav:hover {
 
 .admin-chat-tools .tool-actions {
     grid-template-columns: repeat(3, 1fr);
+}
+
+.admin-chat-tools .tool-actions .tool-btn {
+    width: 100%;
 }
 
 .tool-btn {
@@ -1095,6 +1135,10 @@ nav:hover {
     flex-direction: column;
     overflow: hidden;
     min-height: 420px;
+}
+
+.chat-window {
+    min-height: 0;
 }
 
 .chat-window .chat-messages {
@@ -1206,6 +1250,7 @@ nav:hover {
     }
     .chat-container {
         grid-template-columns: 1fr;
+        min-height: auto;
     }
 }
 
