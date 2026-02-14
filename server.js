@@ -38,6 +38,15 @@ function isStaffFromCookieHeader(cookieHeader) {
     return cookies.pxhb_staff === '1';
 }
 
+function isAdminSocketHandshake(socket) {
+    const ref = (socket && socket.handshake && socket.handshake.headers && socket.handshake.headers.referer) || '';
+    try {
+        return String(ref).includes('/admin');
+    } catch {
+        return false;
+    }
+}
+
 function isSecureRequest(req) {
     const proto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
     return req.secure || proto === 'https';
@@ -307,7 +316,7 @@ app.get('/version', (req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
     const cookieHeader = socket.handshake?.headers?.cookie;
-    const isStaff = isStaffFromCookieHeader(cookieHeader);
+    const isStaff = isStaffFromCookieHeader(cookieHeader) && isAdminSocketHandshake(socket);
 
     console.log(`${isStaff ? 'Staff' : 'User'} connected:`, socket.id);
 
