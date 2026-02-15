@@ -105,6 +105,14 @@
                                 <button class="tool-btn danger" onclick="banSelectedChat()">Ban</button>
                                 <button class="tool-btn" onclick="unbanSelectedChat()">Unban</button>
                             </div>
+                            <div class="tool-row tool-actions">
+                                <button class="tool-btn" onclick="toggleSpotlightFromUi()" id="spotlightToggleBtn">Spotlight</button>
+                                <button class="tool-btn" onclick="spotlightPingFromUi()" id="spotlightPingBtn">Ping</button>
+                            </div>
+                            <div class="tool-row" id="spotlightPadRow" style="display:none;">
+                                <label>Guidance Pad</label>
+                                <div class="spotlight-pad" id="spotlightPad" aria-label="Guidance pad"></div>
+                            </div>
                             <div class="tool-row">
                                 <label>Canned</label>
                                 <select id="cannedSelect" onchange="insertCanned()"></select>

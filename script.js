@@ -19,6 +19,9 @@ let liveAssistOptIn = false;
 let liveAssistCursorTimer = null;
 let lastLiveAssistSentAt = 0;
 
+let guidanceOptIn = false;
+let spotlightState = { enabled: false, x: 0.5, y: 0.5, at: 0 };
+
 let preChatReady = false;
 
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -106,8 +109,95 @@ document.addEventListener('DOMContentLoaded', function () {
         // ignore
     }
 
+    try {
+        const g = document.getElementById('guidanceToggle');
+        if (g) g.checked = false;
+    } catch {
+        // ignore
+    }
+
+    socket.on('guidanceSpotlight', (payload) => {
+        const enabled = Boolean(payload && payload.enabled);
+        const x = Number(payload && payload.x);
+        const y = Number(payload && payload.y);
+        spotlightState = {
+            enabled,
+            x: Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : spotlightState.x,
+            y: Number.isFinite(y) ? Math.max(0, Math.min(1, y)) : spotlightState.y,
+            at: Date.now()
+        };
+        renderSpotlightOverlay();
+    });
+
+    socket.on('guidancePing', (payload) => {
+        const x = Number(payload && payload.x);
+        const y = Number(payload && payload.y);
+        spawnSpotlightPing({
+            x: Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : spotlightState.x,
+            y: Number.isFinite(y) ? Math.max(0, Math.min(1, y)) : spotlightState.y
+        });
+    });
+
     setupLiveAssistCapture();
 });
+
+function setGuidanceOptInFromUi() {
+    const enabled = Boolean(document.getElementById('guidanceToggle')?.checked);
+    guidanceOptIn = enabled;
+    socket.emit('guidanceOptIn', { enabled });
+    if (!enabled) {
+        spotlightState = { enabled: false, x: spotlightState.x, y: spotlightState.y, at: Date.now() };
+        renderSpotlightOverlay();
+    }
+}
+
+function ensureSpotlightOverlay() {
+    let el = document.getElementById('spotlightOverlay');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'spotlightOverlay';
+    el.className = 'spotlight-overlay';
+    el.innerHTML = `
+        <div class="spotlight-dim"></div>
+        <div class="spotlight-hole" id="spotlightHole"></div>
+        <div class="spotlight-pointer" id="spotlightPointer"></div>
+    `;
+    document.body.appendChild(el);
+    return el;
+}
+
+function renderSpotlightOverlay() {
+    const enabled = Boolean(spotlightState && spotlightState.enabled);
+    const overlay = ensureSpotlightOverlay();
+    if (!overlay) return;
+    overlay.style.display = enabled ? 'block' : 'none';
+    if (!enabled) return;
+    const hole = document.getElementById('spotlightHole');
+    const ptr = document.getElementById('spotlightPointer');
+    const x = `${Math.round(spotlightState.x * 1000) / 10}%`;
+    const y = `${Math.round(spotlightState.y * 1000) / 10}%`;
+    if (hole) {
+        hole.style.left = x;
+        hole.style.top = y;
+    }
+    if (ptr) {
+        ptr.style.left = x;
+        ptr.style.top = y;
+    }
+}
+
+function spawnSpotlightPing({ x, y } = {}) {
+    const overlay = ensureSpotlightOverlay();
+    if (!overlay) return;
+    const px = `${Math.round((Number(x) || 0.5) * 1000) / 10}%`;
+    const py = `${Math.round((Number(y) || 0.5) * 1000) / 10}%`;
+    const ping = document.createElement('div');
+    ping.className = 'spotlight-ping';
+    ping.style.left = px;
+    ping.style.top = py;
+    overlay.appendChild(ping);
+    setTimeout(() => ping.remove(), 900);
+}
 
 function setLiveAssistOptInFromUi() {
     const enabled = Boolean(document.getElementById('liveAssistToggle')?.checked);

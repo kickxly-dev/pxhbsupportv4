@@ -21,6 +21,8 @@ let ticketEvidenceById = new Map();
 
 let liveAssistBySocket = new Map();
 
+let spotlightState = { enabled: false, x: 0.5, y: 0.5, lastSentAt: 0 };
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -73,6 +75,74 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
+
+function toggleSpotlightFromUi() {
+    if (!selectedChat) {
+        showToast({ title: 'Spotlight', message: 'Select a chat first.', type: 'warning' });
+        return;
+    }
+    spotlightState.enabled = !spotlightState.enabled;
+    const btn = document.getElementById('spotlightToggleBtn');
+    if (btn) {
+        if (spotlightState.enabled) btn.classList.add('active');
+        else btn.classList.remove('active');
+    }
+    const row = document.getElementById('spotlightPadRow');
+    if (row) row.style.display = spotlightState.enabled ? 'grid' : 'none';
+    socket.emit('adminSpotlight', { socketId: selectedChat, enabled: spotlightState.enabled, x: spotlightState.x, y: spotlightState.y });
+    if (spotlightState.enabled) setupSpotlightPad();
+}
+
+function spotlightPingFromUi() {
+    if (!selectedChat) {
+        showToast({ title: 'Spotlight', message: 'Select a chat first.', type: 'warning' });
+        return;
+    }
+    socket.emit('adminSpotlightPing', { socketId: selectedChat, x: spotlightState.x, y: spotlightState.y });
+}
+
+function setupSpotlightPad() {
+    const pad = document.getElementById('spotlightPad');
+    if (!pad || pad.dataset.bound === '1') return;
+    pad.dataset.bound = '1';
+
+    const dot = document.createElement('div');
+    dot.className = 'spotlight-pad-dot';
+    pad.appendChild(dot);
+
+    const updateDot = () => {
+        dot.style.left = `${Math.round(spotlightState.x * 1000) / 10}%`;
+        dot.style.top = `${Math.round(spotlightState.y * 1000) / 10}%`;
+    };
+    updateDot();
+
+    const send = () => {
+        const now = Date.now();
+        if (now - spotlightState.lastSentAt < 35) return;
+        spotlightState.lastSentAt = now;
+        if (!spotlightState.enabled || !selectedChat) return;
+        socket.emit('adminSpotlight', { socketId: selectedChat, enabled: true, x: spotlightState.x, y: spotlightState.y });
+    };
+
+    const onMove = (ev) => {
+        if (!spotlightState.enabled) return;
+        const r = pad.getBoundingClientRect();
+        const x = (ev.clientX - r.left) / Math.max(1, r.width);
+        const y = (ev.clientY - r.top) / Math.max(1, r.height);
+        spotlightState.x = Math.max(0, Math.min(1, x));
+        spotlightState.y = Math.max(0, Math.min(1, y));
+        updateDot();
+        send();
+    };
+
+    const onClick = (ev) => {
+        onMove(ev);
+        spotlightPingFromUi();
+    };
+
+    pad.addEventListener('mousemove', onMove, { passive: true });
+    pad.addEventListener('click', onClick);
+}
 
 function claimSelectedTicket(force) {
     if (!selectedTicketId) return;
@@ -558,6 +628,16 @@ function setupSocketEvents() {
         liveAssistBySocket.set(String(socketId), state);
         renderLiveAssistOverlay(String(socketId));
         spawnLiveAssistClick(String(socketId), state);
+    });
+
+    socket.on('adminSpotlightDenied', (payload) => {
+        const reason = payload?.reason ? String(payload.reason) : 'Spotlight denied.';
+        showToast({ title: 'Spotlight', message: reason, type: 'warning' });
+        const btn = document.getElementById('spotlightToggleBtn');
+        if (btn) btn.classList.remove('active');
+        const row = document.getElementById('spotlightPadRow');
+        if (row) row.style.display = 'none';
+        spotlightState.enabled = false;
     });
 
     socket.on('adminTickets', (list) => {

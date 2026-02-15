@@ -554,6 +554,7 @@ io.on('connection', (socket) => {
             lastSeenAt: new Date().toISOString(),
             clientMeta: null,
             liveAssist: { enabled: false },
+            guidance: { enabled: false },
             ticketId: null
         });
         broadcastAdminConversations();
@@ -971,6 +972,23 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('guidanceOptIn', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        const enabled = Boolean(payload && payload.enabled);
+        conv.guidance = { enabled: enabled };
+        conv.lastSeenAt = new Date().toISOString();
+        broadcastAdminConversations();
+        pushAudit({
+            type: 'guidance',
+            action: enabled ? 'opt_in' : 'opt_out',
+            by: conv.name || 'user',
+            socketId: socket.id,
+            details: {}
+        });
+    });
+
     socket.on('liveAssistOptIn', (payload) => {
         if (isStaff) return;
         const conv = conversations.get(socket.id);
@@ -1023,6 +1041,64 @@ io.on('connection', (socket) => {
         conv.name = next;
         conv.lastSeenAt = new Date().toISOString();
         broadcastAdminConversations();
+    });
+
+    socket.on('adminSpotlight', ({ socketId, enabled, x, y }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv) return;
+        if (!conv?.guidance?.enabled) {
+            socket.emit('adminSpotlightDenied', { socketId: sid, reason: 'User has not opted in.' });
+            return;
+        }
+
+        const en = Boolean(enabled);
+        const nx = Number(x);
+        const ny = Number(y);
+        const payload = {
+            enabled: en,
+            x: Number.isFinite(nx) ? Math.max(0, Math.min(1, nx)) : 0.5,
+            y: Number.isFinite(ny) ? Math.max(0, Math.min(1, ny)) : 0.5,
+            at: Date.now()
+        };
+        io.to(sid).emit('guidanceSpotlight', payload);
+        pushAudit({
+            type: 'guidance',
+            action: en ? 'spotlight_on' : 'spotlight_off',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: { x: payload.x, y: payload.y }
+        });
+    });
+
+    socket.on('adminSpotlightPing', ({ socketId, x, y }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv) return;
+        if (!conv?.guidance?.enabled) {
+            socket.emit('adminSpotlightDenied', { socketId: sid, reason: 'User has not opted in.' });
+            return;
+        }
+
+        const nx = Number(x);
+        const ny = Number(y);
+        const payload = {
+            x: Number.isFinite(nx) ? Math.max(0, Math.min(1, nx)) : 0.5,
+            y: Number.isFinite(ny) ? Math.max(0, Math.min(1, ny)) : 0.5,
+            at: Date.now()
+        };
+        io.to(sid).emit('guidancePing', payload);
+        pushAudit({
+            type: 'guidance',
+            action: 'ping',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: { x: payload.x, y: payload.y }
+        });
     });
 
     socket.on('clientMeta', (payload) => {

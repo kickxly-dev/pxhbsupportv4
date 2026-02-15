@@ -111,6 +111,13 @@
                                 </label>
                                 <span class="liveassist-hint">(optional)</span>
                             </div>
+                            <div class="guidance-row">
+                                <label class="guidance-toggle">
+                                    <input type="checkbox" id="guidanceToggle" onchange="setGuidanceOptInFromUi()">
+                                    <span>Allow Staff Guidance (Spotlight)</span>
+                                </label>
+                                <span class="guidance-hint">(optional)</span>
+                            </div>
                             <div class="chat-input-wrapper">
                                 <input type="file" id="chatImageInput" accept="image/png,image/jpeg,image/webp,application/pdf" style="display:none;" onchange="handleChatImageSelected(event)">
                                 <button onclick="openChatImagePicker()" class="chat-attach-btn" aria-label="Upload image">
