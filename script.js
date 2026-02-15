@@ -22,6 +22,8 @@ let lastLiveAssistSentAt = 0;
 let guidanceOptIn = false;
 let spotlightState = { enabled: false, x: 0.5, y: 0.5, at: 0 };
 
+let guidedFixState = { enabled: false, id: null, title: null, steps: [], pingStepId: null, pingAt: 0 };
+
 let preChatReady = false;
 
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -42,6 +44,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 addMessage(msg?.text || '', msg?.type || 'user');
             }
         });
+    });
+
+    socket.on('guidanceFixState', (payload) => {
+        guidedFixState = {
+            enabled: Boolean(payload && payload.enabled),
+            id: payload?.id ? String(payload.id) : null,
+            title: payload?.title ? String(payload.title) : null,
+            steps: Array.isArray(payload?.steps) ? payload.steps : [],
+            pingStepId: guidedFixState.pingStepId,
+            pingAt: guidedFixState.pingAt
+        };
+        renderGuidedFixOverlay();
+    });
+
+    socket.on('guidanceFixPing', (payload) => {
+        const stepId = payload?.stepId ? String(payload.stepId) : null;
+        if (!stepId) return;
+        guidedFixState.pingStepId = stepId;
+        guidedFixState.pingAt = Date.now();
+        renderGuidedFixOverlay();
+        setTimeout(() => {
+            if (guidedFixState.pingStepId === stepId && Date.now() - guidedFixState.pingAt >= 1500) {
+                guidedFixState.pingStepId = null;
+                renderGuidedFixOverlay();
+            }
+        }, 1600);
     });
 
     // Handle new messages
@@ -140,6 +168,70 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupLiveAssistCapture();
 });
+
+function ensureGuidedFixOverlay() {
+    let el = document.getElementById('guidedFixOverlay');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'guidedFixOverlay';
+    el.className = 'guidedfix-overlay';
+    document.body.appendChild(el);
+    return el;
+}
+
+function renderGuidedFixOverlay() {
+    const overlay = ensureGuidedFixOverlay();
+    if (!overlay) return;
+
+    if (!guidanceOptIn || !guidedFixState?.enabled || !guidedFixState?.id) {
+        overlay.style.display = 'none';
+        overlay.innerHTML = '';
+        return;
+    }
+
+    overlay.style.display = 'block';
+
+    const title = guidedFixState.title ? guidedFixState.title : 'Fix Steps';
+    const steps = Array.isArray(guidedFixState.steps) ? guidedFixState.steps : [];
+
+    const items = steps
+        .map((s) => {
+            const sid = s?.id ? String(s.id) : '';
+            const text = s?.text ? String(s.text) : '';
+            const done = Boolean(s?.done);
+            const pinged = guidedFixState.pingStepId && String(guidedFixState.pingStepId) === sid;
+            if (!sid || !text) return '';
+            return `
+                <label class="guidedfix-item ${done ? 'done' : ''} ${pinged ? 'ping' : ''}" data-step-id="${escapeHtml(sid)}">
+                    <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleGuidedFixStep('${escapeHtml(sid)}', this.checked)">
+                    <span>${escapeHtml(text)}</span>
+                </label>
+            `;
+        })
+        .join('');
+
+    overlay.innerHTML = `
+        <div class="guidedfix-card">
+            <div class="guidedfix-header">
+                <div class="guidedfix-title">${escapeHtml(title)}</div>
+                <button class="guidedfix-hide" onclick="hideGuidedFixOverlay()">Hide</button>
+            </div>
+            <div class="guidedfix-body">${items || '<div class="guidedfix-empty">No steps.</div>'}</div>
+        </div>
+    `;
+}
+
+function hideGuidedFixOverlay() {
+    const overlay = document.getElementById('guidedFixOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function toggleGuidedFixStep(stepId, done) {
+    if (!guidanceOptIn) return;
+    const sid = String(stepId || '');
+    if (!sid || !guidedFixState?.id) return;
+    socket.emit('userGuidanceFixToggle', { id: guidedFixState.id, stepId: sid, done: Boolean(done) });
+}
 
 function setGuidanceOptInFromUi() {
     const enabled = Boolean(document.getElementById('guidanceToggle')?.checked);

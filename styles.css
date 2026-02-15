@@ -1070,6 +1070,154 @@ nav:hover {
     animation: liveAssistRipple 0.9s ease-out forwards;
 }
 
+.guidedfix-overlay {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 99998;
+    width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.guidedfix-card {
+    pointer-events: auto;
+    background: rgba(11, 11, 13, 0.86);
+    border: 1px solid rgba(255, 106, 0, 0.22);
+    border-radius: 18px;
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+    backdrop-filter: blur(18px) saturate(180%);
+}
+
+.guidedfix-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.guidedfix-title {
+    font-weight: 950;
+    letter-spacing: 0.2px;
+    color: rgba(245, 246, 247, 0.95);
+}
+
+.guidedfix-hide {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(245, 246, 247, 0.92);
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.guidedfix-body {
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+    max-height: min(46vh, 360px);
+    overflow: auto;
+}
+
+.guidedfix-item {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 10px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: rgba(245, 246, 247, 0.90);
+    font-weight: 800;
+}
+
+.guidedfix-item input {
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--orange-primary);
+}
+
+.guidedfix-item.done {
+    opacity: 0.75;
+}
+
+.guidedfix-item.done span {
+    text-decoration: line-through;
+    color: rgba(245, 246, 247, 0.70);
+}
+
+.guidedfix-item.ping {
+    border-color: rgba(255, 197, 61, 0.40);
+    box-shadow: 0 0 0 4px rgba(255, 197, 61, 0.12);
+}
+
+.guidedfix-empty {
+    color: rgba(245, 246, 247, 0.70);
+    font-weight: 800;
+}
+
+.guidedfix-admin-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.guidedfix-admin-live {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.guidedfix-admin-summary {
+    font-weight: 950;
+    color: rgba(245, 246, 247, 0.88);
+    margin-bottom: 10px;
+}
+
+.guidedfix-admin-steps {
+    display: grid;
+    gap: 10px;
+}
+
+.guidedfix-admin-step {
+    display: grid;
+    grid-template-columns: 1fr 90px;
+    gap: 10px;
+    align-items: center;
+}
+
+.guidedfix-admin-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.guidedfix-admin-num {
+    color: rgba(245, 246, 247, 0.55);
+    font-weight: 950;
+}
+
+.guidedfix-admin-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(245, 246, 247, 0.88);
+    font-weight: 900;
+}
+
+.guidedfix-admin-step.done .guidedfix-admin-text {
+    text-decoration: line-through;
+    color: rgba(245, 246, 247, 0.62);
+}
+
 .quick-action-btn {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);

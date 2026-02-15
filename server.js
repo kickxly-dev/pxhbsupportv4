@@ -431,6 +431,16 @@ function getConversationSummary(socketId) {
         mutedUntil: conv.mutedUntil || null,
         banned: Boolean(conv.banned),
         verified: Boolean(conv.verified),
+        guidance: conv.guidance || { enabled: false },
+        guidedFix: conv.guidedFix
+            ? {
+                  id: conv.guidedFix.id,
+                  title: conv.guidedFix.title || null,
+                  total: Array.isArray(conv.guidedFix.steps) ? conv.guidedFix.steps.length : 0,
+                  done: Array.isArray(conv.guidedFix.steps) ? conv.guidedFix.steps.filter((s) => s && s.done).length : 0,
+                  at: conv.guidedFix.at || null
+              }
+            : null,
         ticket: ticket
             ? {
                   id: ticket.id,
@@ -555,6 +565,7 @@ io.on('connection', (socket) => {
             clientMeta: null,
             liveAssist: { enabled: false },
             guidance: { enabled: false },
+            guidedFix: null,
             ticketId: null
         });
         broadcastAdminConversations();
@@ -568,6 +579,15 @@ io.on('connection', (socket) => {
             ensureTicketForConversation(socket.id);
         }
         socket.emit('loadMessages', conv?.messages || []);
+
+        if (conv?.guidance?.enabled && conv?.guidedFix) {
+            socket.emit('guidanceFixState', {
+                enabled: true,
+                id: conv.guidedFix.id,
+                title: conv.guidedFix.title || null,
+                steps: Array.isArray(conv.guidedFix.steps) ? conv.guidedFix.steps : []
+            });
+        }
     }
 
     // Send current staff status immediately so UI is correct on first paint
@@ -987,6 +1007,24 @@ io.on('connection', (socket) => {
             socketId: socket.id,
             details: {}
         });
+
+        if (!enabled) {
+            if (conv.guidedFix) {
+                conv.guidedFix = null;
+                io.to(socket.id).emit('guidanceFixState', { enabled: false, id: null, title: null, steps: [] });
+                io.to('admins').emit('adminGuidanceFixState', { socketId: socket.id, guidedFix: null });
+                broadcastAdminConversations();
+            }
+        } else {
+            if (conv.guidedFix) {
+                io.to(socket.id).emit('guidanceFixState', {
+                    enabled: true,
+                    id: conv.guidedFix.id,
+                    title: conv.guidedFix.title || null,
+                    steps: Array.isArray(conv.guidedFix.steps) ? conv.guidedFix.steps : []
+                });
+            }
+        }
     });
 
     socket.on('liveAssistOptIn', (payload) => {
@@ -1071,6 +1109,111 @@ io.on('connection', (socket) => {
             socketId: sid,
             details: { x: payload.x, y: payload.y }
         });
+    });
+
+    socket.on('adminGuidanceFixSet', ({ socketId, title, steps }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv) return;
+        if (!conv?.guidance?.enabled) {
+            socket.emit('adminSpotlightDenied', { socketId: sid, reason: 'User has not opted in.' });
+            return;
+        }
+
+        const t = safeText(title, 60) || 'Fix Steps';
+        const raw = Array.isArray(steps) ? steps : [];
+        const normalized = raw
+            .map((s) => safeText(s, 120))
+            .filter(Boolean)
+            .slice(0, 12)
+            .map((text) => ({ id: `GS-${Date.now()}-${Math.random().toString(16).slice(2)}`, text, done: false }));
+
+        const gf = {
+            id: `GF-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            title: t,
+            steps: normalized,
+            at: new Date().toISOString()
+        };
+        conv.guidedFix = gf;
+        conv.lastSeenAt = new Date().toISOString();
+
+        io.to(sid).emit('guidanceFixState', { enabled: true, id: gf.id, title: gf.title, steps: gf.steps });
+        io.to('admins').emit('adminGuidanceFixState', { socketId: sid, guidedFix: gf });
+        broadcastAdminConversations();
+
+        pushAudit({
+            type: 'guidance',
+            action: 'guidedfix_set',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: { title: gf.title, steps: gf.steps.length }
+        });
+    });
+
+    socket.on('adminGuidanceFixClear', ({ socketId }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv) return;
+
+        conv.guidedFix = null;
+        conv.lastSeenAt = new Date().toISOString();
+        io.to(sid).emit('guidanceFixState', { enabled: false, id: null, title: null, steps: [] });
+        io.to('admins').emit('adminGuidanceFixState', { socketId: sid, guidedFix: null });
+        broadcastAdminConversations();
+
+        pushAudit({
+            type: 'guidance',
+            action: 'guidedfix_clear',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: {}
+        });
+    });
+
+    socket.on('adminGuidanceFixPing', ({ socketId, stepId }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv?.guidedFix || !Array.isArray(conv.guidedFix.steps)) return;
+        if (!conv?.guidance?.enabled) {
+            socket.emit('adminSpotlightDenied', { socketId: sid, reason: 'User has not opted in.' });
+            return;
+        }
+        const st = safeText(stepId, 80);
+        if (!st) return;
+        const exists = conv.guidedFix.steps.some((s) => s && String(s.id) === String(st));
+        if (!exists) return;
+        io.to(sid).emit('guidanceFixPing', { id: conv.guidedFix.id, stepId: st, at: Date.now() });
+        pushAudit({
+            type: 'guidance',
+            action: 'guidedfix_ping',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: { stepId: st }
+        });
+    });
+
+    socket.on('userGuidanceFixToggle', ({ id, stepId, done }) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv?.guidedFix || !Array.isArray(conv.guidedFix.steps)) return;
+        if (!conv?.guidance?.enabled) return;
+        const gid = safeText(id, 80);
+        if (!gid || String(gid) !== String(conv.guidedFix.id)) return;
+        const st = safeText(stepId, 80);
+        if (!st) return;
+        const nextDone = Boolean(done);
+        const step = conv.guidedFix.steps.find((s) => s && String(s.id) === String(st));
+        if (!step) return;
+        step.done = nextDone;
+        conv.lastSeenAt = new Date().toISOString();
+        io.to('admins').emit('adminGuidanceFixState', { socketId: socket.id, guidedFix: conv.guidedFix });
+        broadcastAdminConversations();
     });
 
     socket.on('adminSpotlightPing', ({ socketId, x, y }) => {
@@ -1259,6 +1402,8 @@ io.on('connection', (socket) => {
                 at: new Date().toISOString()
             });
         }
+
+        socket.emit('adminGuidanceFixState', { socketId, guidedFix: conv.guidedFix || null });
         broadcastAdminConversations();
     });
 

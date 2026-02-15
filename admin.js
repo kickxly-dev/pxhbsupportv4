@@ -23,6 +23,8 @@ let liveAssistBySocket = new Map();
 
 let spotlightState = { enabled: false, x: 0.5, y: 0.5, lastSentAt: 0 };
 
+let guidedFixBySocket = new Map();
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -75,6 +77,82 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
+
+function sendGuidedFixToSelectedChat() {
+    if (!selectedChat) {
+        showToast({ title: 'Guided Fix', message: 'Select a chat first.', type: 'warning' });
+        return;
+    }
+    const title = (document.getElementById('guidedFixTitle')?.value || '').trim();
+    const raw = (document.getElementById('guidedFixSteps')?.value || '').trim();
+    const steps = raw
+        ? raw
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean)
+        : [];
+
+    if (!steps.length) {
+        showToast({ title: 'Guided Fix', message: 'Add at least 1 step.', type: 'warning' });
+        return;
+    }
+
+    socket.emit('adminGuidanceFixSet', { socketId: selectedChat, title, steps });
+    showToast({ title: 'Guided Fix', message: `Sent ${steps.length} step(s).`, type: 'success' });
+}
+
+function clearGuidedFixForSelectedChat() {
+    if (!selectedChat) {
+        showToast({ title: 'Guided Fix', message: 'Select a chat first.', type: 'warning' });
+        return;
+    }
+    socket.emit('adminGuidanceFixClear', { socketId: selectedChat });
+}
+
+function pingGuidedFixStep(stepId) {
+    if (!selectedChat) return;
+    const sid = String(stepId || '');
+    if (!sid) return;
+    socket.emit('adminGuidanceFixPing', { socketId: selectedChat, stepId: sid });
+}
+
+function renderGuidedFixLive() {
+    const el = document.getElementById('guidedFixLive');
+    if (!el) return;
+    if (!selectedChat) {
+        el.textContent = '—';
+        return;
+    }
+    const gf = guidedFixBySocket.get(String(selectedChat)) || null;
+    if (!gf || !Array.isArray(gf.steps) || !gf.steps.length) {
+        el.textContent = '—';
+        return;
+    }
+    const done = gf.steps.filter((s) => s && s.done).length;
+    const total = gf.steps.length;
+    const items = gf.steps
+        .map((s, idx) => {
+            const id = s?.id ? String(s.id) : '';
+            const text = s?.text ? String(s.text) : '';
+            const isDone = Boolean(s?.done);
+            if (!id || !text) return '';
+            return `
+                <div class="guidedfix-admin-step ${isDone ? 'done' : ''}">
+                    <div class="guidedfix-admin-left">
+                        <span class="guidedfix-admin-num">${idx + 1}.</span>
+                        <span class="guidedfix-admin-text">${escapeHtml(text)}</span>
+                    </div>
+                    <button class="tool-btn" onclick="pingGuidedFixStep('${escapeHtml(id)}')">Ping</button>
+                </div>
+            `;
+        })
+        .join('');
+
+    el.innerHTML = `
+        <div class="guidedfix-admin-summary">${done}/${total} done</div>
+        <div class="guidedfix-admin-steps">${items}</div>
+    `;
+}
 
 function toggleSpotlightFromUi() {
     if (!selectedChat) {
@@ -640,6 +718,17 @@ function setupSocketEvents() {
         spotlightState.enabled = false;
     });
 
+    socket.on('adminGuidanceFixState', (payload) => {
+        const socketId = payload?.socketId;
+        if (!socketId) return;
+        const gf = payload?.guidedFix || null;
+        if (gf) guidedFixBySocket.set(String(socketId), gf);
+        else guidedFixBySocket.delete(String(socketId));
+        if (selectedChat && String(selectedChat) === String(socketId)) {
+            renderGuidedFixLive();
+        }
+    });
+
     socket.on('adminTickets', (list) => {
         const arr = Array.isArray(list) ? list : [];
         ticketsById = new Map(arr.map((t) => [t.id, t]));
@@ -1061,6 +1150,8 @@ function handleAdminHotkeys(event) {
             input.value = input.value ? `${input.value} ${base}` : base;
             input.focus();
             emitAdminTyping(true);
+    renderGuidedFixLive();
+
         }
         return;
     }
