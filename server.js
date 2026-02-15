@@ -1453,13 +1453,6 @@ io.on('connection', (socket) => {
 
     socket.on('preChatSubmit', (payload) => {
         if (isStaff) return;
-
-        socket.emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
-    });
-
-    socket.on('adminWarRoomRequest', () => {
-        if (!isStaff) return;
-        socket.emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
         if (lockdownState.enabled) {
             socket.emit('newMessage', {
                 id: Date.now(),
@@ -1546,6 +1539,11 @@ io.on('connection', (socket) => {
         broadcastAdminTickets();
         socket.emit('lockdownUpdate', lockdownState);
         socket.emit('adminAuditLogInit', auditLog);
+    });
+
+    socket.on('adminWarRoomRequest', () => {
+        if (!isStaff) return;
+        socket.emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
     });
 
     socket.on('adminGetTicketEvidence', ({ ticketId }) => {
