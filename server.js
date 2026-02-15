@@ -237,6 +237,78 @@ const staffSockets = new Set();
 
 let lockdownState = { enabled: false, by: null, at: null, reason: null };
 
+let auditLog = [];
+
+function pushAudit(entry) {
+    try {
+        const e = entry || {};
+        const item = {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            at: new Date().toISOString(),
+            ...e
+        };
+        auditLog.push(item);
+        if (auditLog.length > 250) auditLog = auditLog.slice(-250);
+        io.to('admins').emit('adminAuditLogEntry', item);
+    } catch {
+        // ignore
+    }
+}
+
+function nowIso() {
+    return new Date().toISOString();
+}
+
+function antiAbuseState(socket) {
+    if (!socket.data.antiAbuse) {
+        socket.data.antiAbuse = {
+            msgTimes: [],
+            imgTimes: [],
+            strikes: 0,
+            slowUntil: 0,
+            slowMs: 0,
+            lastWarnAt: 0,
+            lastActionAt: 0
+        };
+    }
+    return socket.data.antiAbuse;
+}
+
+function recordAndCheckRate({ socket, kind }) {
+    const s = antiAbuseState(socket);
+    const now = Date.now();
+    const windowMs = 10_000;
+    const max = kind === 'image' ? 3 : 7;
+    const arr = kind === 'image' ? s.imgTimes : s.msgTimes;
+    arr.push(now);
+    while (arr.length && now - arr[0] > windowMs) arr.shift();
+
+    if (s.slowUntil && now < s.slowUntil) {
+        if (s.lastActionAt && now - s.lastActionAt < s.slowMs) {
+            return { ok: false, reason: 'slowmode' };
+        }
+    }
+    s.lastActionAt = now;
+
+    if (arr.length <= max) {
+        return { ok: true };
+    }
+
+    s.strikes += 1;
+
+    if (s.strikes === 1) {
+        return { ok: false, reason: 'warn' };
+    }
+
+    if (s.strikes === 2) {
+        s.slowMs = 1800;
+        s.slowUntil = now + 45_000;
+        return { ok: false, reason: 'slowmode_on' };
+    }
+
+    return { ok: false, reason: 'mute' };
+}
+
 // Very small in-memory security limits
 const loginAttemptsByIp = new Map();
 function allowLoginAttempt(ip) {
@@ -513,7 +585,7 @@ io.on('connection', (socket) => {
         }
 
         const now = Date.now();
-        if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 400) return;
+        if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 200) return;
         socket.data.lastMsgAt = now;
 
         const conv = conversations.get(socket.id);
@@ -537,6 +609,65 @@ io.on('connection', (socket) => {
                 type: 'system',
                 socketId: socket.id
             });
+            return;
+        }
+
+        const limit = recordAndCheckRate({ socket, kind: 'message' });
+        if (!limit.ok) {
+            if (limit.reason === 'warn') {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'Slow down — you are sending messages too fast. Next time will enable slowmode.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                pushAudit({
+                    type: 'antiabuse',
+                    action: 'warn',
+                    socketId: socket.id,
+                    by: 'system',
+                    details: { kind: 'message' }
+                });
+            } else if (limit.reason === 'slowmode' || limit.reason === 'slowmode_on') {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'Slowmode is active. Please wait a moment between messages.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                if (limit.reason === 'slowmode_on') {
+                    pushAudit({
+                        type: 'antiabuse',
+                        action: 'slowmode_on',
+                        socketId: socket.id,
+                        by: 'system',
+                        details: { kind: 'message', until: nowIso() }
+                    });
+                }
+            } else if (limit.reason === 'mute') {
+                const ms = 5 * 60 * 1000;
+                conv.mutedUntil = new Date(Date.now() + ms);
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'You were temporarily muted for spamming. Please try again in a few minutes.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                pushAudit({
+                    type: 'antiabuse',
+                    action: 'auto_mute',
+                    socketId: socket.id,
+                    by: 'system',
+                    details: { minutes: 5, kind: 'message' }
+                });
+                broadcastAdminConversations();
+            }
             return;
         }
 
@@ -620,6 +751,65 @@ io.on('connection', (socket) => {
         if (!conv) return;
         if (conv.banned) return;
         if (conv.mutedUntil && Date.now() < Number(new Date(conv.mutedUntil))) return;
+
+        const limit = recordAndCheckRate({ socket, kind: 'image' });
+        if (!limit.ok) {
+            if (limit.reason === 'warn') {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'Slow down — you are uploading too fast. Next time will enable slowmode.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                pushAudit({
+                    type: 'antiabuse',
+                    action: 'warn',
+                    socketId: socket.id,
+                    by: 'system',
+                    details: { kind: 'image' }
+                });
+            } else if (limit.reason === 'slowmode' || limit.reason === 'slowmode_on') {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'Slowmode is active. Please wait before uploading again.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                if (limit.reason === 'slowmode_on') {
+                    pushAudit({
+                        type: 'antiabuse',
+                        action: 'slowmode_on',
+                        socketId: socket.id,
+                        by: 'system',
+                        details: { kind: 'image', until: nowIso() }
+                    });
+                }
+            } else if (limit.reason === 'mute') {
+                const ms = 7 * 60 * 1000;
+                conv.mutedUntil = new Date(Date.now() + ms);
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: 'You were temporarily muted for spamming uploads. Please try again later.',
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                pushAudit({
+                    type: 'antiabuse',
+                    action: 'auto_mute',
+                    socketId: socket.id,
+                    by: 'system',
+                    details: { minutes: 7, kind: 'image' }
+                });
+                broadcastAdminConversations();
+            }
+            return;
+        }
 
         conv.lastSeenAt = new Date().toISOString();
         ensureTicketForConversation(socket.id);
@@ -779,6 +969,7 @@ io.on('connection', (socket) => {
         broadcastAdminConversations();
         broadcastAdminTickets();
         socket.emit('lockdownUpdate', lockdownState);
+        socket.emit('adminAuditLogInit', auditLog);
     });
 
     socket.on('adminSetLockdown', ({ enabled, reason }) => {
@@ -790,6 +981,13 @@ io.on('connection', (socket) => {
             reason: safeText(reason, 200) || null
         };
         broadcastLockdown();
+
+        pushAudit({
+            type: 'staff',
+            action: Boolean(enabled) ? 'lockdown_on' : 'lockdown_off',
+            by: staffStatus.user || 'Staff',
+            details: { reason: safeText(reason, 200) || null }
+        });
     });
 
     // Admin: select conversation
@@ -1044,20 +1242,63 @@ io.on('connection', (socket) => {
         if (act === 'mute') {
             const ms = Math.max(0, Math.min(Number(durationMs || 0), 1000 * 60 * 60 * 24 * 7));
             conv.mutedUntil = new Date(Date.now() + ms);
+
+            pushAudit({
+                type: 'staff',
+                action: 'mute',
+                by: staffStatus.user || 'Staff',
+                socketId,
+                details: { ms }
+            });
         } else if (act === 'unmute') {
             conv.mutedUntil = null;
+
+            pushAudit({
+                type: 'staff',
+                action: 'unmute',
+                by: staffStatus.user || 'Staff',
+                socketId
+            });
         } else if (act === 'ban') {
             conv.banned = true;
             // Disconnect the user immediately
             io.to(socketId).disconnectSockets(true);
+
+            pushAudit({
+                type: 'staff',
+                action: 'ban',
+                by: staffStatus.user || 'Staff',
+                socketId
+            });
         } else if (act === 'unban') {
             conv.banned = false;
+
+            pushAudit({
+                type: 'staff',
+                action: 'unban',
+                by: staffStatus.user || 'Staff',
+                socketId
+            });
         } else if (act === 'disconnect') {
             io.to(socketId).disconnectSockets(true);
+
+            pushAudit({
+                type: 'staff',
+                action: 'disconnect',
+                by: staffStatus.user || 'Staff',
+                socketId
+            });
         } else if (act === 'verify') {
             const code = Math.random().toString(16).slice(2, 8).toUpperCase();
             conv.verifyChallenge = { code, issuedAt: Date.now() };
             conv.verified = false;
+
+            pushAudit({
+                type: 'staff',
+                action: 'verify_challenge',
+                by: staffStatus.user || 'Staff',
+                socketId
+            });
 
             const sys = {
                 id: Date.now(),

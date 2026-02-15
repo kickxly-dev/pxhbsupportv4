@@ -15,6 +15,8 @@ let adminAudioCtx = null;
 let adminAudioUnlocked = false;
 let adminLockdownAlarm = { osc: null, gain: null, timer: null };
 
+let adminAuditLog = [];
+
 const CANNED_RESPONSES = {
     '1': 'Thanks for reaching out — what’s your username and what happened?',
     '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
@@ -444,6 +446,39 @@ function setupSocketEvents() {
             stopAdminLockdownAlarm();
         }
     });
+
+    socket.on('adminAuditLogInit', (list) => {
+        adminAuditLog = Array.isArray(list) ? list : [];
+        renderAuditLog();
+    });
+
+    socket.on('adminAuditLogEntry', (entry) => {
+        if (!entry) return;
+        adminAuditLog = [...adminAuditLog, entry].slice(-250);
+        renderAuditLog();
+    });
+}
+
+function renderAuditLog() {
+    const el = document.getElementById('auditLog');
+    if (!el) return;
+    const items = Array.isArray(adminAuditLog) ? adminAuditLog.slice(-60).reverse() : [];
+    if (!items.length) {
+        el.innerHTML = '<div class="audit-empty">No recent events.</div>';
+        return;
+    }
+
+    el.innerHTML = items
+        .map((e) => {
+            const at = e?.at ? new Date(e.at).toLocaleTimeString() : '';
+            const type = escapeHtml(String(e?.type || 'event'));
+            const action = escapeHtml(String(e?.action || ''));
+            const by = escapeHtml(String(e?.by || 'system'));
+            const sid = e?.socketId ? escapeHtml(String(e.socketId).slice(0, 10)) : '';
+            const tail = sid ? ` • ${sid}` : '';
+            return `<div class="audit-item"><span class="audit-time">${escapeHtml(at)}</span><span class="audit-pill">${type}</span><span class="audit-action">${action}</span><span class="audit-by">by ${by}${tail}</span></div>`;
+        })
+        .join('');
 }
 
 function toggleLockdownFromUi() {
