@@ -651,6 +651,8 @@ function setupSocketEvents() {
         const socketId = payload?.socketId;
         if (!socketId) return;
         selectedChat = socketId;
+        const tools = document.getElementById('adminChatTools');
+        if (tools) tools.style.display = 'block';
         renderChatMessages(payload?.messages || []);
         highlightSelectedChat(socketId);
         updateStats();
@@ -1150,8 +1152,6 @@ function handleAdminHotkeys(event) {
             input.value = input.value ? `${input.value} ${base}` : base;
             input.focus();
             emitAdminTyping(true);
-    renderGuidedFixLive();
-
         }
         return;
     }
@@ -1239,7 +1239,12 @@ function selectChat(socketId, el) {
     document.querySelectorAll('.chat-item').forEach((item) => item.classList.remove('selected'));
     if (el) el.classList.add('selected');
 
+    const tools = document.getElementById('adminChatTools');
+    if (tools) tools.style.display = 'block';
+
     socket.emit('adminSelectConversation', { socketId });
+
+    renderGuidedFixLive();
 
     isAdminTyping = false;
     socket.emit('staffTyping', { socketId, isTyping: false });
