@@ -2238,6 +2238,11 @@ nav:hover {
     padding: 12px;
 }
 
+.warroom-item.selected {
+    border-color: rgba(255, 106, 0, 0.35);
+    box-shadow: 0 10px 30px rgba(255, 106, 0, 0.12);
+}
+
 .warroom-kpi-label {
     color: var(--text-dim);
     font-weight: 800;
@@ -2340,6 +2345,30 @@ nav:hover {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.warroom-presets {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.warroom-presets-title {
+    font-weight: 950;
+    margin-bottom: 8px;
+}
+
+.warroom-presets-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.warroom-presets-hint {
+    margin-top: 10px;
+    color: var(--text-dim);
+    font-weight: 800;
+    font-size: 12px;
 }
 
 .warroom-footer {

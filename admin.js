@@ -29,6 +29,8 @@ let guardrailsBySocket = new Map();
 
 let warRoomState = { snapshot: null };
 
+let selectedWarChat = null;
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -81,6 +83,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
+
+function selectWarChat(socketId, el) {
+    const sid = String(socketId || '').trim();
+    if (!sid) return;
+    selectedWarChat = sid;
+    document.querySelectorAll('#warHotChats .warroom-item.warchat').forEach((n) => n.classList.remove('selected'));
+    if (el && el.classList) el.classList.add('selected');
+    const hint = document.getElementById('warPresetHint');
+    if (hint) hint.textContent = `Selected: ${sid}`;
+}
+
+function applyGuardrailsPresetToSelectedWarChat(presetKey) {
+    if (!selectedWarChat) {
+        showToast({ title: 'War Room', message: 'Select a Hot Chat first.', type: 'warning' });
+        return;
+    }
+    applyGuardrailsPreset(selectedWarChat, presetKey);
+}
+
+function applyGuardrailsPreset(socketId, presetKey) {
+    const sid = String(socketId || '').trim();
+    const key = String(presetKey || '').trim();
+    if (!sid || !key) return;
+
+    let guardrails;
+    if (key === 'shield') {
+        guardrails = { attachments: false, cooldownMs: 5000, requireVerified: true };
+    } else if (key === 'slow') {
+        guardrails = { attachments: true, cooldownMs: 2000, requireVerified: false };
+    } else if (key === 'verify') {
+        guardrails = { attachments: true, cooldownMs: 0, requireVerified: true };
+    } else if (key === 'clear') {
+        guardrails = { attachments: true, cooldownMs: 0, requireVerified: false };
+    } else {
+        return;
+    }
+
+    socket.emit('adminGuardrailsSet', { socketId: sid, guardrails });
+    showToast({ title: 'Guardrails', message: `Applied preset: ${key}`, type: 'success' });
+}
 
 function openTicketFromWarRoom(ticketId) {
     const id = String(ticketId || '').trim();
@@ -211,13 +253,14 @@ function renderWarRoom(snapshot) {
                       const connected = Boolean(c?.connected);
                       const flags = [connected ? 'online' : 'offline', verified ? 'verified' : 'unverified'];
                       return `
-                        <div class="warroom-item">
+                        <div class="warroom-item warchat" data-warchat-id="${socketId}" onclick="selectWarChat('${socketId}', this)">
                             <div class="warroom-item-main">
                                 <div class="warroom-item-title">${name} ${unread ? `<span class=\"warroom-pill\">${unread} unread</span>` : ''}</div>
                                 <div class="warroom-item-sub">${socketId} · ${escapeHtml(flags.join(' · '))}</div>
                             </div>
                             <div class="warroom-item-actions">
-                                <button class="tool-btn" onclick="openChatFromWarRoom('${socketId}')">Open</button>
+                                <button class="tool-btn" onclick="event.stopPropagation(); openChatFromWarRoom('${socketId}')">Open</button>
+                                <button class="tool-btn" onclick="event.stopPropagation(); applyGuardrailsPreset('${socketId}', 'shield')">Shield</button>
                             </div>
                         </div>
                       `;

@@ -126,6 +126,16 @@
                             <button class="tool-btn" onclick="socket.emit('adminWarRoomRequest')">Refresh War Room</button>
                             <button class="tool-btn danger" onclick="toggleLockdownFromUi()">Toggle Lockdown</button>
                         </div>
+                        <div class="warroom-presets" id="warPresets">
+                            <div class="warroom-presets-title">Guardrails presets (use on Hot Chats)</div>
+                            <div class="warroom-presets-row">
+                                <button class="tool-btn" onclick="applyGuardrailsPresetToSelectedWarChat('shield')">Shield Up</button>
+                                <button class="tool-btn" onclick="applyGuardrailsPresetToSelectedWarChat('slow')">Slowmode</button>
+                                <button class="tool-btn" onclick="applyGuardrailsPresetToSelectedWarChat('verify')">Verify Gate</button>
+                                <button class="tool-btn danger" onclick="applyGuardrailsPresetToSelectedWarChat('clear')">Clear</button>
+                            </div>
+                            <div class="warroom-presets-hint" id="warPresetHint">Select a Hot Chat below, then apply a preset.</div>
+                        </div>
                         <div class="warroom-footer" id="warLastUpdated">—</div>
                     </div>
                 </div>
