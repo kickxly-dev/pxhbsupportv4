@@ -45,6 +45,23 @@ function releaseSelectedTicket() {
     socket.emit('adminTicketClaimClear', { ticketId: selectedTicketId });
 }
 
+function analyzeSelectedTicket() {
+    if (!selectedTicketId) return;
+    const btn = document.getElementById('ticketAiAnalyzeBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Analyzing…';
+    }
+    socket.emit('adminAiAnalyzeTicket', { ticketId: selectedTicketId });
+    setTimeout(() => {
+        const b = document.getElementById('ticketAiAnalyzeBtn');
+        if (b) {
+            b.disabled = false;
+            b.textContent = 'Analyze';
+        }
+    }, 3500);
+}
+
 function filterChatList() {
     const q = (document.getElementById('chatSearch')?.value || '').toLowerCase();
     const list = Array.from(conversationsById.values());
@@ -206,6 +223,21 @@ function selectTicket(ticketId, el) {
         }
     }
 
+    const aiEl = document.getElementById('ticketAi');
+    if (aiEl) {
+        if (t.ai && (t.ai.summary || t.ai.nextQuestion || t.ai.suggestedPriority || (t.ai.suggestedTags && t.ai.suggestedTags.length) || t.ai.error)) {
+            const parts = [];
+            if (t.ai.summary) parts.push(`Summary: ${t.ai.summary}`);
+            if (t.ai.suggestedPriority) parts.push(`Suggested priority: ${t.ai.suggestedPriority}`);
+            if (Array.isArray(t.ai.suggestedTags) && t.ai.suggestedTags.length) parts.push(`Suggested tags: ${t.ai.suggestedTags.join(', ')}`);
+            if (t.ai.nextQuestion) parts.push(`Next question: ${t.ai.nextQuestion}`);
+            if (t.ai.error) parts.push(`Error: ${t.ai.error}`);
+            aiEl.textContent = parts.join('\n');
+        } else {
+            aiEl.textContent = '—';
+        }
+    }
+
     const statusSel = document.getElementById('ticketStatus');
     const priSel = document.getElementById('ticketPriority');
     const asgInput = document.getElementById('ticketAssignee');
@@ -293,6 +325,10 @@ function setupSocketEvents() {
         const arr = Array.isArray(list) ? list : [];
         ticketsById = new Map(arr.map((t) => [t.id, t]));
         renderTicketList(arr);
+
+        if (selectedTicketId && ticketsById.has(selectedTicketId)) {
+            selectTicket(selectedTicketId, document.querySelector(`.ticket-item[data-ticket-id="${CSS.escape(selectedTicketId)}"]`));
+        }
     });
 }
 

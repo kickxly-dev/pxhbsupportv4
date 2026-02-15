@@ -158,6 +158,13 @@
                                     <label>Form</label>
                                     <div class="ticket-form" id="ticketForm">—</div>
                                 </div>
+                                <div class="tool-row">
+                                    <label>AI Helper</label>
+                                    <div class="ticket-ai" id="ticketAi">—</div>
+                                </div>
+                                <div class="tool-row tool-actions ticket-actions">
+                                    <button class="tool-btn" onclick="analyzeSelectedTicket()" id="ticketAiAnalyzeBtn">Analyze</button>
+                                </div>
                                 <div class="tool-row tool-actions ticket-actions">
                                     <button class="tool-btn" onclick="claimSelectedTicket(false)" id="ticketClaimBtn">Claim</button>
                                     <button class="tool-btn" onclick="claimSelectedTicket(true)" id="ticketForceClaimBtn">Force Take</button>

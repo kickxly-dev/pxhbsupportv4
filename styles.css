@@ -1684,16 +1684,26 @@ nav:hover {
 }
 
 .ticket-detail-header {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     margin-bottom: 14px;
+}
+
+.ticket-ai {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 14px;
+    padding: 12px;
+    white-space: pre-wrap;
 }
 
 .ticket-title {
     font-weight: 900;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
 }
 
 .ticket-subtitle {

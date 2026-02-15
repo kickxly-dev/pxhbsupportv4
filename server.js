@@ -28,6 +28,9 @@ const MAX_IMAGE_DATA_URL_LEN = 8_500_000;
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
 function discordPost(payload) {
     if (!DISCORD_WEBHOOK_URL) return;
     try {
@@ -64,6 +67,61 @@ function discordNotify(title, lines) {
     if (!DISCORD_WEBHOOK_URL) return;
     const content = [title, ...(Array.isArray(lines) ? lines : [])].filter(Boolean).join('\n');
     discordPost({ content: String(content).slice(0, 1900) });
+}
+
+function openAiPostJson(bodyObj) {
+    return new Promise((resolve, reject) => {
+        if (!OPENAI_API_KEY) {
+            reject(new Error('Missing OPENAI_API_KEY'));
+            return;
+        }
+
+        const body = Buffer.from(JSON.stringify(bodyObj || {}));
+        const req = https.request(
+            {
+                method: 'POST',
+                hostname: 'api.openai.com',
+                path: '/v1/chat/completions',
+                headers: {
+                    Authorization: `Bearer ${OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': body.length
+                },
+                timeout: 12_000
+            },
+            (res) => {
+                let raw = '';
+                res.on('data', (d) => {
+                    raw += String(d);
+                });
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(raw || '{}');
+                        resolve({ status: res.statusCode || 0, data: parsed });
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+        );
+        req.on('timeout', () => req.destroy(new Error('timeout')));
+        req.on('error', (e) => reject(e));
+        req.write(body);
+        req.end();
+    });
+}
+
+function extractJsonObject(text) {
+    const s = String(text || '');
+    const start = s.indexOf('{');
+    const end = s.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    const candidate = s.slice(start, end + 1);
+    try {
+        return JSON.parse(candidate);
+    } catch {
+        return null;
+    }
 }
 
 function safeText(input, maxLen) {
@@ -237,6 +295,7 @@ function getTicketSummary(ticket) {
         assignee: ticket.assignee,
         claim: ticket.claim || null,
         form: ticket.form || null,
+        ai: ticket.ai || null,
         createdAt: ticket.createdAt,
         updatedAt: ticket.updatedAt,
         agentView: conv?.clientMeta
@@ -848,6 +907,72 @@ io.on('connection', (socket) => {
             `**Ticket:** ${ticket.id}`,
             `**By:** ${staffStatus.user || 'Staff'}`
         ]);
+    });
+
+    socket.on('adminAiAnalyzeTicket', async ({ ticketId }) => {
+        if (!isStaff) return;
+        const id = safeText(ticketId, 32);
+        if (!id) return;
+        const ticket = tickets.get(id);
+        if (!ticket) return;
+        const conv = conversations.get(ticket.socketId);
+        if (!conv) return;
+
+        const form = ticket.form || null;
+        const last = (Array.isArray(conv.messages) ? conv.messages : []).slice(-20);
+        const transcript = last
+            .map((m) => {
+                const role = (m?.type || '').toLowerCase() === 'staff' ? 'STAFF' : (m?.type || '').toLowerCase() === 'system' ? 'SYSTEM' : 'USER';
+                if (m?.image?.mime) return `${role}: [image ${m.image.mime}, ${Math.round((m.image.size || 0) / 1024)}kb]`;
+                return `${role}: ${(m?.text || '').toString().slice(0, 600)}`;
+            })
+            .join('\n');
+
+        const prompt =
+            `You are an expert support triage assistant.\n` +
+            `Return ONLY valid JSON with keys: summary (string), suggested_priority (one of low/normal/high/urgent), suggested_tags (array of strings, max 6), next_question (string).\n` +
+            `Keep summary <= 60 words. next_question should be 1 short question to ask the user next.\n\n` +
+            `Pre-chat form (may be null): ${JSON.stringify(form)}\n` +
+            `Ticket status: ${ticket.status}, priority: ${ticket.priority}\n\n` +
+            `Recent transcript:\n${transcript}`;
+
+        try {
+            const { status, data } = await openAiPostJson({
+                model: OPENAI_MODEL,
+                messages: [
+                    { role: 'system', content: 'You format outputs strictly as JSON.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.2
+            });
+
+            const content =
+                data && data.choices && data.choices[0] && data.choices[0].message
+                    ? data.choices[0].message.content
+                    : '';
+            const parsed = extractJsonObject(content);
+
+            ticket.ai = {
+                at: new Date().toISOString(),
+                model: OPENAI_MODEL,
+                ok: status >= 200 && status < 300,
+                summary: parsed?.summary || null,
+                suggestedPriority: parsed?.suggested_priority || null,
+                suggestedTags: Array.isArray(parsed?.suggested_tags) ? parsed.suggested_tags.slice(0, 6) : null,
+                nextQuestion: parsed?.next_question || null,
+                raw: parsed ? null : String(content || '').slice(0, 2000)
+            };
+        } catch (e) {
+            ticket.ai = {
+                at: new Date().toISOString(),
+                model: OPENAI_MODEL,
+                ok: false,
+                error: String(e && e.message ? e.message : e).slice(0, 200)
+            };
+        }
+
+        ticket.updatedAt = new Date().toISOString();
+        broadcastAdminConversations();
     });
 
     socket.on('adminModerationAction', ({ socketId, action, durationMs }) => {
