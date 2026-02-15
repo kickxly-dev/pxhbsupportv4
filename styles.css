@@ -1,8 +1,8 @@
 /* P.X HB Support - INSANE Orange & Black Theme */
 :root {
     --orange-primary: #ff6a00;
-    --orange-glow: #ff8a2a;
-    --orange-neon: #ffb26b;
+    --orange-secondary: #ff8533;
+    --orange-glow: #ffb366;
     --primary-black: #0b0b0d;
     --dark-gray: #121216;
     --medium-gray: #1a1a22;
@@ -17,6 +17,181 @@
     --border: rgba(255, 255, 255, 0.08);
     --panel: rgba(18, 18, 22, 0.86);
     --panel-2: rgba(18, 18, 22, 0.62);
+}
+
+@keyframes toastIn {
+    from {
+        transform: translate3d(0, -10px, 0);
+        opacity: 0;
+    }
+    to {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes toastOut {
+    from {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+    }
+    to {
+        transform: translate3d(0, -8px, 0);
+        opacity: 0;
+    }
+}
+
+.global-banner {
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(18, 18, 22, 0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(18px) saturate(180%);
+    color: var(--text-primary);
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.global-banner .banner-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.global-banner .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.global-banner .banner-left .banner-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 106, 0, 0.12);
+    border: 1px solid rgba(255, 106, 0, 0.24);
+}
+
+.global-banner .banner-text {
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.global-banner .banner-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.global-banner .banner-btn {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(380px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(11, 11, 13, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px) saturate(180%);
+    color: var(--text-primary);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    animation: toastIn 220ms ease-out;
+}
+
+.toast.closing {
+    animation: toastOut 180ms ease-in forwards;
+}
+
+.toast .toast-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: rgba(255, 106, 0, 0.12);
+    border: 1px solid rgba(255, 106, 0, 0.24);
+}
+
+.toast .toast-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.toast .toast-title {
+    font-weight: 900;
+    font-size: 13px;
+    margin: 0;
+    color: rgba(245, 246, 247, 0.95);
+}
+
+.toast .toast-message {
+    margin: 2px 0 0;
+    font-size: 13px;
+    line-height: 1.25;
+    color: rgba(245, 246, 247, 0.78);
+    word-break: break-word;
+}
+
+.toast.toast-success {
+    border-color: rgba(46, 229, 157, 0.18);
+}
+
+.toast.toast-success .toast-icon {
+    background: rgba(46, 229, 157, 0.12);
+    border-color: rgba(46, 229, 157, 0.22);
+}
+
+.toast.toast-error {
+    border-color: rgba(255, 77, 79, 0.18);
+}
+
+.toast.toast-error .toast-icon {
+    background: rgba(255, 77, 79, 0.12);
+    border-color: rgba(255, 77, 79, 0.22);
+}
+
+.toast.toast-warning {
+    border-color: rgba(255, 197, 61, 0.18);
+}
+
+.toast.toast-warning .toast-icon {
+    background: rgba(255, 197, 61, 0.12);
+    border-color: rgba(255, 197, 61, 0.22);
 }
 
 @keyframes lockdownPulse {

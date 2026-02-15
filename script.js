@@ -98,6 +98,7 @@ function handleLockdownUpdate(state) {
     const sendBtn = document.querySelector('.chat-send-btn');
     const attachBtn = document.querySelector('.chat-attach-btn');
     const reason = state && state.reason ? String(state.reason) : '';
+    const banner = document.getElementById('globalBanner');
 
     try {
         if (enabled) {
@@ -117,6 +118,21 @@ function handleLockdownUpdate(state) {
         const statusText = document.querySelector('.chat-status span:last-child');
         if (statusText) statusText.textContent = 'Support Team - Locked';
 
+        if (banner) {
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div class="banner-inner">
+                    <div class="banner-left">
+                        <div class="banner-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                        <div class="banner-text">${escapeHtml(reason ? `Lockdown active: ${reason}` : 'Lockdown active: Chat is temporarily locked by staff.')}</div>
+                    </div>
+                    <div class="banner-right">
+                        <button class="banner-btn" onclick="this.closest('#globalBanner').style.display='none'">Dismiss</button>
+                    </div>
+                </div>
+            `;
+        }
+
         startLockdownAlarm();
     } else {
         if (preChatReady) {
@@ -126,6 +142,11 @@ function handleLockdownUpdate(state) {
         }
         const statusText = document.querySelector('.chat-status span:last-child');
         if (statusText) statusText.textContent = defaultStatusLabel;
+
+        if (banner) {
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+        }
 
         stopLockdownAlarm();
     }
@@ -561,29 +582,34 @@ function handleMessageReceipt(payload) {
 }
 
 function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${getNotificationIcon(type)}"></i>
-        <span>${escapeHtml(String(message))}</span>
+    showToast({
+        title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Notice',
+        message: String(message),
+        type: type || 'warning'
+    });
+}
+
+function showToast({ title, message, type, durationMs } = {}) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const t = String(type || 'warning').toLowerCase();
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${t}`;
+    toast.innerHTML = `
+        <div class="toast-icon"><i class="fas fa-${getNotificationIcon(t)}"></i></div>
+        <div class="toast-body">
+            <p class="toast-title">${escapeHtml(String(title || 'Notice'))}</p>
+            <p class="toast-message">${escapeHtml(String(message || ''))}</p>
+        </div>
     `;
 
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--warning)'};
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        z-index: 10000;
-    `;
-
-    document.body.appendChild(notification);
-
+    container.appendChild(toast);
+    const ms = Number.isFinite(durationMs) ? durationMs : 2600;
     setTimeout(() => {
-        notification.remove();
-    }, 2500);
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 220);
+    }, ms);
 }
 
 function getNotificationIcon(type) {

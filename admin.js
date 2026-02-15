@@ -304,6 +304,22 @@ function checkAuth() {
     }
 }
 
+function selectNextTicket(delta) {
+    const container = document.getElementById('ticketItems');
+    if (!container) return;
+    const items = Array.from(container.querySelectorAll('.ticket-item[data-ticket-id]'));
+    if (!items.length) return;
+
+    const currentIdx = selectedTicketId ? items.findIndex((el) => String(el.dataset.ticketId) === String(selectedTicketId)) : -1;
+    const nextIdx = currentIdx === -1 ? 0 : Math.max(0, Math.min(items.length - 1, currentIdx + Number(delta || 0)));
+    const nextEl = items[nextIdx];
+    if (!nextEl) return;
+    const id = nextEl.dataset.ticketId;
+    if (!id) return;
+    selectTicket(String(id), nextEl);
+    nextEl.scrollIntoView({ block: 'nearest' });
+}
+
 function setupSocketEvents() {
     socket.on('adminConversations', (list) => {
         const arr = Array.isArray(list) ? list : [];
@@ -385,7 +401,32 @@ function setupSocketEvents() {
         const toggle = document.getElementById('lockdownToggle');
         if (toggle) toggle.checked = enabled;
         const reason = state && state.reason ? String(state.reason) : '';
-        showAdminToast(enabled ? `Lockdown enabled${reason ? `: ${reason}` : ''}` : 'Lockdown disabled');
+        showToast({
+            title: enabled ? 'Lockdown Enabled' : 'Lockdown Disabled',
+            message: reason ? reason : enabled ? 'Chat is temporarily locked by staff.' : 'Chat is live again.',
+            type: enabled ? 'warning' : 'success'
+        });
+
+        const banner = document.getElementById('globalBanner');
+        if (banner) {
+            if (enabled) {
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div class="banner-inner">
+                        <div class="banner-left">
+                            <div class="banner-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                            <div class="banner-text">${escapeHtml(reason ? `Lockdown active: ${reason}` : 'Lockdown active: Users cannot chat right now.')}</div>
+                        </div>
+                        <div class="banner-right">
+                            <button class="banner-btn" onclick="this.closest('#globalBanner').style.display='none'">Dismiss</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+            }
+        }
 
         try {
             if (enabled) {
@@ -411,15 +452,40 @@ function toggleLockdownFromUi() {
     socket.emit('adminSetLockdown', { enabled, reason });
 }
 
-function showAdminToast(text) {
-    const msg = String(text || '').trim();
-    if (!msg) return;
-    const el = document.createElement('div');
-    el.className = 'notification warning';
-    el.textContent = msg;
-    el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,106,0,0.25);color:white;padding:12px 14px;border-radius:12px;z-index:10000;max-width:360px;font-weight:800;';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2200);
+function showToast({ title, message, type, durationMs } = {}) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const t = String(type || 'warning').toLowerCase();
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${t}`;
+    toast.innerHTML = `
+        <div class="toast-icon"><i class="fas fa-${getNotificationIcon(t)}"></i></div>
+        <div class="toast-body">
+            <p class="toast-title">${escapeHtml(String(title || 'Notice'))}</p>
+            <p class="toast-message">${escapeHtml(String(message || ''))}</p>
+        </div>
+    `;
+
+    container.appendChild(toast);
+    const ms = Number.isFinite(durationMs) ? durationMs : 2600;
+    setTimeout(() => {
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 220);
+    }, ms);
+}
+
+function getNotificationIcon(type) {
+    switch (type) {
+        case 'success':
+            return 'check-circle';
+        case 'error':
+            return 'exclamation-circle';
+        case 'warning':
+            return 'exclamation-triangle';
+        default:
+            return 'bell';
+    }
 }
 
 function startAdminLockdownAlarm() {
@@ -498,6 +564,27 @@ function emitAdminTyping(next) {
 
 function handleAdminHotkeys(event) {
     if (event.defaultPrevented) return;
+
+    if (event.ctrlKey || event.metaKey) {
+        const key = String(event.key || '').toLowerCase();
+
+        if (key === 'k') {
+            event.preventDefault();
+            const searchId = currentSection === 'tickets' ? 'ticketSearch' : currentSection === 'chats' ? 'chatSearch' : null;
+            const el = searchId ? document.getElementById(searchId) : null;
+            if (el) {
+                el.focus();
+                el.select();
+            }
+            return;
+        }
+
+        if (currentSection === 'tickets' && (key === 'arrowdown' || key === 'arrowup')) {
+            event.preventDefault();
+            selectNextTicket(key === 'arrowdown' ? 1 : -1);
+            return;
+        }
+    }
 
     const activeEl = document.activeElement;
     const isChatInputFocused = activeEl && activeEl.id === 'adminChatInput';
