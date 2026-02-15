@@ -21,6 +21,10 @@ function parseCookies(cookieHeader) {
     return out;
 }
 
+function broadcastLockdown() {
+    io.emit('lockdownUpdate', lockdownState);
+}
+
 const MAX_MESSAGE_TEXT = 1000;
 const MAX_NAME_LEN = 40;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -230,6 +234,8 @@ const STAFF_CREDENTIALS = loadStaffCredentials();
 let messages = [];
 let staffStatus = { isOnline: false, user: null };
 const staffSockets = new Set();
+
+let lockdownState = { enabled: false, by: null, at: null, reason: null };
 
 // Very small in-memory security limits
 const loginAttemptsByIp = new Map();
@@ -487,10 +493,24 @@ io.on('connection', (socket) => {
 
     // Send current staff status immediately so UI is correct on first paint
     socket.emit('staffStatusUpdate', staffStatus);
+
+    socket.emit('lockdownUpdate', lockdownState);
     
     // Handle new messages
     socket.on('sendMessage', (data) => {
         if (isStaff) return;
+
+        if (lockdownState.enabled) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Chat is temporarily locked by staff. Please try again soon.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
 
         const now = Date.now();
         if (socket.data.lastMsgAt && now - socket.data.lastMsgAt < 400) return;
@@ -584,6 +604,18 @@ io.on('connection', (socket) => {
 
     socket.on('sendImage', (payload) => {
         if (isStaff) return;
+
+        if (lockdownState.enabled) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Chat is temporarily locked by staff. Please try again soon.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
         const conv = conversations.get(socket.id);
         if (!conv) return;
         if (conv.banned) return;
@@ -661,6 +693,18 @@ io.on('connection', (socket) => {
 
     socket.on('preChatSubmit', (payload) => {
         if (isStaff) return;
+
+        if (lockdownState.enabled) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Chat is temporarily locked by staff. Please try again soon.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
         const conv = conversations.get(socket.id);
         if (!conv) return;
         const ticket = ensureTicketForConversation(socket.id);
@@ -734,6 +778,18 @@ io.on('connection', (socket) => {
         if (!isStaff) return;
         broadcastAdminConversations();
         broadcastAdminTickets();
+        socket.emit('lockdownUpdate', lockdownState);
+    });
+
+    socket.on('adminSetLockdown', ({ enabled, reason }) => {
+        if (!isStaff) return;
+        lockdownState = {
+            enabled: Boolean(enabled),
+            by: staffStatus.user || 'Staff',
+            at: new Date().toISOString(),
+            reason: safeText(reason, 200) || null
+        };
+        broadcastLockdown();
     });
 
     // Admin: select conversation

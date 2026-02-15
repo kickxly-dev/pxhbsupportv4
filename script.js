@@ -54,6 +54,10 @@ document.addEventListener('DOMContentLoaded', function () {
         updateStaffStatus(status);
     });
 
+    socket.on('lockdownUpdate', (state) => {
+        handleLockdownUpdate(state);
+    });
+
     socket.on('staffTyping', (payload) => {
         updateStaffTyping(Boolean(payload && payload.isTyping), payload?.user || null);
     });
@@ -85,6 +89,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupAudioUnlock();
 });
+
+function handleLockdownUpdate(state) {
+    const enabled = Boolean(state && state.enabled);
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.querySelector('.chat-send-btn');
+    const attachBtn = document.querySelector('.chat-attach-btn');
+    const reason = state && state.reason ? String(state.reason) : '';
+
+    if (enabled) {
+        if (input) input.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        if (attachBtn) attachBtn.disabled = true;
+        addMessage(reason ? `Chat locked: ${reason}` : 'Chat is temporarily locked by staff.', 'system');
+        const statusText = document.querySelector('.chat-status span:last-child');
+        if (statusText) statusText.textContent = 'Support Team - Locked';
+    } else {
+        if (preChatReady) {
+            if (input) input.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (attachBtn) attachBtn.disabled = false;
+        }
+        const statusText = document.querySelector('.chat-status span:last-child');
+        if (statusText) statusText.textContent = defaultStatusLabel;
+    }
+}
 
 function initPreChatGate() {
     const gate = document.getElementById('preChatGate');

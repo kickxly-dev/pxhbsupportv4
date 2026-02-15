@@ -230,6 +230,14 @@
                             <label>Auto-assign Chats</label>
                             <input type="checkbox" checked>
                         </div>
+                        <div class="setting-item">
+                            <label>Lockdown Mode</label>
+                            <input type="checkbox" id="lockdownToggle" onchange="toggleLockdownFromUi()">
+                        </div>
+                        <div class="setting-item">
+                            <label>Lockdown Reason (optional)</label>
+                            <input type="text" id="lockdownReason" placeholder="Maintenance, raid mitigation, etc.">
+                        </div>
                     </div>
                     <button class="save-btn" onclick="saveSettings()">
                         <i class="fas fa-save"></i>

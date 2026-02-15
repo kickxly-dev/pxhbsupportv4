@@ -357,6 +357,31 @@ function setupSocketEvents() {
             }
         }
     });
+
+    socket.on('lockdownUpdate', (state) => {
+        const enabled = Boolean(state && state.enabled);
+        const toggle = document.getElementById('lockdownToggle');
+        if (toggle) toggle.checked = enabled;
+        const reason = state && state.reason ? String(state.reason) : '';
+        showAdminToast(enabled ? `Lockdown enabled${reason ? `: ${reason}` : ''}` : 'Lockdown disabled');
+    });
+}
+
+function toggleLockdownFromUi() {
+    const enabled = Boolean(document.getElementById('lockdownToggle')?.checked);
+    const reason = document.getElementById('lockdownReason')?.value || '';
+    socket.emit('adminSetLockdown', { enabled, reason });
+}
+
+function showAdminToast(text) {
+    const msg = String(text || '').trim();
+    if (!msg) return;
+    const el = document.createElement('div');
+    el.className = 'notification warning';
+    el.textContent = msg;
+    el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,106,0,0.25);color:white;padding:12px 14px;border-radius:12px;z-index:10000;max-width:360px;font-weight:800;';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2200);
 }
 
 function emitAdminTyping(next) {
