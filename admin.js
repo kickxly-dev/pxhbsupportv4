@@ -330,6 +330,33 @@ function setupSocketEvents() {
             selectTicket(selectedTicketId, document.querySelector(`.ticket-item[data-ticket-id="${CSS.escape(selectedTicketId)}"]`));
         }
     });
+
+    socket.on('adminAiTicketResult', (payload) => {
+        const id = payload?.ticketId;
+        const ai = payload?.ai;
+        if (!id) return;
+        const t = ticketsById.get(String(id));
+        if (t) {
+            t.ai = ai || null;
+        }
+        if (selectedTicketId && String(id) === String(selectedTicketId)) {
+            const aiEl = document.getElementById('ticketAi');
+            if (aiEl) {
+                if (!ai) {
+                    aiEl.textContent = '—';
+                } else {
+                    const parts = [];
+                    if (ai.summary) parts.push(`Summary: ${ai.summary}`);
+                    if (ai.suggestedPriority) parts.push(`Suggested priority: ${ai.suggestedPriority}`);
+                    if (Array.isArray(ai.suggestedTags) && ai.suggestedTags.length) parts.push(`Suggested tags: ${ai.suggestedTags.join(', ')}`);
+                    if (ai.nextQuestion) parts.push(`Next question: ${ai.nextQuestion}`);
+                    if (ai.error) parts.push(`Error: ${ai.error}`);
+                    if (ai.raw) parts.push(`Raw: ${String(ai.raw).slice(0, 500)}`);
+                    aiEl.textContent = parts.length ? parts.join('\n') : '—';
+                }
+            }
+        }
+    });
 }
 
 function emitAdminTyping(next) {

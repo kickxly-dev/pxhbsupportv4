@@ -943,7 +943,8 @@ io.on('connection', (socket) => {
                     { role: 'system', content: 'You format outputs strictly as JSON.' },
                     { role: 'user', content: prompt }
                 ],
-                temperature: 0.2
+                temperature: 0.2,
+                response_format: { type: 'json_object' }
             });
 
             const content =
@@ -972,6 +973,7 @@ io.on('connection', (socket) => {
         }
 
         ticket.updatedAt = new Date().toISOString();
+        socket.emit('adminAiTicketResult', { ticketId: ticket.id, ai: ticket.ai });
         broadcastAdminConversations();
     });
 
