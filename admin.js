@@ -231,6 +231,32 @@ function renderWarRoom(snapshot) {
                             <div class="warroom-item-actions">
                                 <button class="tool-btn" onclick="openTicketFromWarRoom('${id}')">Open</button>
                                 <button class="tool-btn" onclick="socket.emit('adminTicketClaim', { ticketId: '${id}', force: false })">Claim</button>
+                                <button class="tool-btn" onclick="socket.emit('adminTicketClaim', { ticketId: '${id}', force: true })">Force Take</button>
+                                <button class="tool-btn danger" onclick="socket.emit('adminTicketClaimClear', { ticketId: '${id}', force: true })">Release</button>
+                            </div>
+                        </div>
+                      `;
+                  })
+                  .join('')
+            : '—';
+    }
+
+    const ownEl = document.getElementById('warOwnership');
+    const ownership = Array.isArray(s?.ownership) ? s.ownership : [];
+    if (ownEl) {
+        ownEl.innerHTML = ownership.length
+            ? ownership
+                  .slice(0, 12)
+                  .map((o) => {
+                      const user = escapeHtml(String(o?.user || 'unclaimed'));
+                      const count = Number(o?.count || 0);
+                      const urgent = Number(o?.urgent || 0);
+                      const oldest = o?.oldestUpdatedAt ? new Date(o.oldestUpdatedAt).toLocaleTimeString() : '—';
+                      return `
+                        <div class="warroom-item">
+                            <div class="warroom-item-main">
+                                <div class="warroom-item-title">${user} <span class="warroom-pill">${count} tickets</span>${urgent ? ` <span class=\"warroom-pill\">${urgent} urgent</span>` : ''}</div>
+                                <div class="warroom-item-sub">Oldest activity: ${escapeHtml(oldest)}</div>
                             </div>
                         </div>
                       `;
@@ -1838,7 +1864,7 @@ function addAdminImageMessage(dataUrl, type) {
 }
 
 function escapeHtml(str) {
-    return str
+    return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')

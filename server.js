@@ -75,6 +75,14 @@ function discordNotify(title, lines) {
     discordPost({ content: String(content).slice(0, 1900) });
 }
 
+function denyAdminAction(socket, action, reason) {
+    try {
+        socket.emit('adminDenied', { action: String(action || 'unknown'), reason: String(reason || 'denied') });
+    } catch {
+        // ignore
+    }
+}
+
 function openAiPostJson(bodyObj) {
     return new Promise((resolve, reject) => {
         if (!OPENAI_API_KEY) {
@@ -472,6 +480,25 @@ function buildWarRoomSnapshot() {
             unread: Number(c.unread || 0)
         }));
 
+    const owners = new Map();
+    for (const t of ticketList) {
+        const who = t?.claim?.user ? String(t.claim.user) : 'unclaimed';
+        const rec = owners.get(who) || { user: who, count: 0, urgent: 0, oldestUpdatedAt: null };
+        rec.count += 1;
+        if (String(t?.priority || '') === 'urgent') rec.urgent += 1;
+        const at = t?.updatedAt ? new Date(t.updatedAt).getTime() : 0;
+        if (at) {
+            const cur = rec.oldestUpdatedAt ? new Date(rec.oldestUpdatedAt).getTime() : 0;
+            if (!cur || at < cur) rec.oldestUpdatedAt = t.updatedAt;
+        }
+        owners.set(who, rec);
+    }
+    const ownership = Array.from(owners.values()).sort((a, b) => {
+        if (a.user === 'unclaimed' && b.user !== 'unclaimed') return -1;
+        if (b.user === 'unclaimed' && a.user !== 'unclaimed') return 1;
+        return Number(b.count || 0) - Number(a.count || 0);
+    });
+
     return {
         at: new Date().toISOString(),
         kpis: {
@@ -481,6 +508,7 @@ function buildWarRoomSnapshot() {
             staffOnline: staffStatus.isOnline ? 1 : 0
         },
         alerts,
+        ownership,
         hotTickets,
         hotChats
     };
@@ -1677,6 +1705,12 @@ io.on('connection', (socket) => {
         const ticket = tickets.get(id);
         if (!ticket) return;
 
+        const user = staffStatus.user || 'Staff';
+        if (ticket.claim && ticket.claim.user && ticket.claim.user !== user) {
+            denyAdminAction(socket, 'ticket_update', 'Ticket is claimed by another staff member. Force take or ask them to release.');
+            return;
+        }
+
         if (status != null) {
             const s = String(status).toLowerCase();
             if (s === 'open' || s === 'closed' || s === 'pending') {
@@ -1735,12 +1769,20 @@ io.on('connection', (socket) => {
         ]);
     });
 
-    socket.on('adminTicketClaimClear', ({ ticketId }) => {
+    socket.on('adminTicketClaimClear', ({ ticketId, force }) => {
         if (!isStaff) return;
         const id = safeText(ticketId, 32);
         if (!id) return;
         const ticket = tickets.get(id);
         if (!ticket) return;
+
+        const user = staffStatus.user || 'Staff';
+        const wantsForce = Boolean(force);
+        if (ticket.claim && ticket.claim.user && ticket.claim.user !== user && !wantsForce) {
+            denyAdminAction(socket, 'ticket_release', 'Ticket is claimed by another staff member.');
+            return;
+        }
+
         ticket.claim = null;
         ticket.updatedAt = new Date().toISOString();
         broadcastAdminConversations();
