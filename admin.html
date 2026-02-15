@@ -205,6 +205,9 @@
                                 <div class="tool-row">
                                     <button class="tool-btn" onclick="openLinkedChatFromTicket()">Open Linked Chat</button>
                                 </div>
+                                <div class="tool-row">
+                                    <button class="tool-btn" onclick="openTicketReplay()">Replay</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -258,6 +261,31 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <div class="replay-modal" id="replayModal" style="display:none;">
+        <div class="replay-modal-content">
+            <div class="replay-header">
+                <div class="replay-title" id="replayTitle">Replay</div>
+                <button class="replay-close" onclick="closeTicketReplay()" aria-label="Close replay"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="replay-controls">
+                <button class="tool-btn" id="replayPlayBtn" onclick="toggleReplayPlay()">Play</button>
+                <button class="tool-btn" onclick="stepReplayOnce()">Step</button>
+                <label class="replay-speed">
+                    Speed
+                    <select id="replaySpeed" onchange="setReplaySpeedFromUi()">
+                        <option value="1">1x</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                    </select>
+                </label>
+                <button class="tool-btn danger" onclick="resetReplay()">Reset</button>
+            </div>
+            <div class="replay-body">
+                <div class="replay-stream" id="replayStream"></div>
+            </div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

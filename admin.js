@@ -19,6 +19,17 @@ let adminAuditLog = [];
 
 let ticketEvidenceById = new Map();
 
+let replayState = {
+    isOpen: false,
+    isPlaying: false,
+    speed: 1,
+    socketId: null,
+    title: null,
+    messages: [],
+    idx: 0,
+    timer: null
+};
+
 const CANNED_RESPONSES = {
     '1': 'Thanks for reaching out — what’s your username and what happened?',
     '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
@@ -303,6 +314,154 @@ function openLinkedChatFromTicket() {
     const socketId = String(t.socketId);
     const item = document.querySelector(`.chat-item[data-socket-id="${CSS.escape(socketId)}"]`);
     selectChat(socketId, item);
+}
+
+function openTicketReplay() {
+    if (!selectedTicketId) return;
+    const t = ticketsById.get(selectedTicketId);
+    if (!t || !t.socketId) return;
+    const socketId = String(t.socketId);
+
+    replayState.socketId = socketId;
+    replayState.title = `${t.id} - ${t.name || t.socketId}`;
+    replayState.messages = [];
+    replayState.idx = 0;
+    replayState.isPlaying = false;
+    clearReplayTimer();
+
+    const modal = document.getElementById('replayModal');
+    const stream = document.getElementById('replayStream');
+    const titleEl = document.getElementById('replayTitle');
+    const playBtn = document.getElementById('replayPlayBtn');
+    if (stream) stream.innerHTML = '';
+    if (titleEl) titleEl.textContent = `Replay • ${replayState.title}`;
+    if (playBtn) playBtn.textContent = 'Play';
+    if (modal) modal.style.display = 'flex';
+    replayState.isOpen = true;
+
+    fetch(`/api/admin/transcript/${encodeURIComponent(socketId)}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
+        .then((data) => {
+            const msgs = Array.isArray(data?.messages) ? data.messages : [];
+            replayState.messages = msgs;
+            replayState.idx = 0;
+            renderReplayStatus();
+        })
+        .catch(() => {
+            const s = document.getElementById('replayStream');
+            if (s) s.innerHTML = '<div class="audit-empty">Failed to load transcript.</div>';
+        });
+}
+
+function closeTicketReplay() {
+    const modal = document.getElementById('replayModal');
+    if (modal) modal.style.display = 'none';
+    replayState.isOpen = false;
+    replayState.isPlaying = false;
+    clearReplayTimer();
+}
+
+function setReplaySpeedFromUi() {
+    const val = Number(document.getElementById('replaySpeed')?.value || 1);
+    replayState.speed = val === 2 ? 2 : val === 5 ? 5 : 1;
+}
+
+function toggleReplayPlay() {
+    if (!replayState.isOpen) return;
+    if (!replayState.messages.length) return;
+    replayState.isPlaying = !replayState.isPlaying;
+    const btn = document.getElementById('replayPlayBtn');
+    if (btn) btn.textContent = replayState.isPlaying ? 'Pause' : 'Play';
+    if (replayState.isPlaying) scheduleReplayTick();
+    else clearReplayTimer();
+}
+
+function stepReplayOnce() {
+    if (!replayState.isOpen) return;
+    replayState.isPlaying = false;
+    const btn = document.getElementById('replayPlayBtn');
+    if (btn) btn.textContent = 'Play';
+    clearReplayTimer();
+    replayAppendNext();
+}
+
+function resetReplay() {
+    if (!replayState.isOpen) return;
+    replayState.isPlaying = false;
+    clearReplayTimer();
+    replayState.idx = 0;
+    const btn = document.getElementById('replayPlayBtn');
+    if (btn) btn.textContent = 'Play';
+    const stream = document.getElementById('replayStream');
+    if (stream) stream.innerHTML = '';
+    renderReplayStatus();
+}
+
+function clearReplayTimer() {
+    if (replayState.timer) clearTimeout(replayState.timer);
+    replayState.timer = null;
+}
+
+function scheduleReplayTick() {
+    clearReplayTimer();
+    if (!replayState.isPlaying) return;
+    replayState.timer = setTimeout(() => {
+        replayAppendNext();
+        if (replayState.isPlaying) scheduleReplayTick();
+    }, Math.max(120, Math.round(650 / (replayState.speed || 1))));
+}
+
+function renderReplayStatus() {
+    const stream = document.getElementById('replayStream');
+    if (!stream) return;
+    if (!replayState.messages.length) {
+        stream.innerHTML = '<div class="audit-empty">Loading…</div>';
+    }
+}
+
+function replayAppendNext() {
+    const stream = document.getElementById('replayStream');
+    if (!stream) return;
+    const m = replayState.messages[replayState.idx];
+    if (!m) {
+        replayState.isPlaying = false;
+        const btn = document.getElementById('replayPlayBtn');
+        if (btn) btn.textContent = 'Play';
+        clearReplayTimer();
+        return;
+    }
+    replayState.idx += 1;
+
+    const type = String(m?.type || 'user').toLowerCase();
+    const who = String(m?.user || (type === 'staff' ? 'Staff' : type === 'system' ? 'System' : 'User'));
+    const at = m?.timestamp ? new Date(m.timestamp).toLocaleTimeString() : '';
+
+    const item = document.createElement('div');
+    item.className = 'replay-item';
+    const bubble = document.createElement('div');
+    bubble.className = `replay-bubble ${type}`;
+
+    let content = '';
+    if (m?.image?.dataUrl) {
+        content = `<img class="message-image" src="${escapeHtml(String(m.image.dataUrl))}" alt="upload" />`;
+    } else if (m?.file?.dataUrl) {
+        const f = m.file;
+        const dataUrl = escapeHtml(String(f.dataUrl || ''));
+        const name = escapeHtml(String(f.name || 'file'));
+        const mime = String(f.mime || '').toLowerCase();
+        const icon = mime === 'application/pdf' ? 'file-pdf' : 'file';
+        const size = Number(f.size || 0);
+        const sizeText = size ? `${Math.round(size / 1024)} KB` : '';
+        content = `<a class="file-card" href="${dataUrl}" download="${name}"><i class="fas fa-${icon}"></i><span>${name}</span><em>${escapeHtml(sizeText)}</em></a>`;
+    } else {
+        content = `<p>${escapeHtml(String(m?.text || ''))}</p>`;
+    }
+
+    item.innerHTML = `<div class="replay-time">${escapeHtml(at)}</div>`;
+    bubble.innerHTML = `<div class="replay-who">${escapeHtml(who)}</div>${content}`;
+    item.appendChild(bubble);
+    stream.appendChild(item);
+    stream.scrollTop = stream.scrollHeight;
 }
 
 function checkAuth() {
