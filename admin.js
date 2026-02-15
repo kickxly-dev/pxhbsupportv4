@@ -25,6 +25,8 @@ let spotlightState = { enabled: false, x: 0.5, y: 0.5, lastSentAt: 0 };
 
 let guidedFixBySocket = new Map();
 
+let guardrailsBySocket = new Map();
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -77,6 +79,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
+
+function hydrateGuardrailsInputs() {
+    if (!selectedChat) return;
+    const g = guardrailsBySocket.get(String(selectedChat)) || { attachments: true, cooldownMs: 0, requireVerified: false };
+    const a = document.getElementById('guardAttachments');
+    const c = document.getElementById('guardCooldown');
+    const v = document.getElementById('guardRequireVerify');
+    if (a) a.checked = g.attachments !== false;
+    if (c) c.value = String(Number(g.cooldownMs || 0));
+    if (v) v.checked = Boolean(g.requireVerified);
+}
+
+function applyGuardrailsFromUi() {
+    if (!selectedChat) {
+        showToast({ title: 'Guardrails', message: 'Select a chat first.', type: 'warning' });
+        return;
+    }
+    const attachments = Boolean(document.getElementById('guardAttachments')?.checked);
+    const cooldownMs = Number(document.getElementById('guardCooldown')?.value || 0);
+    const requireVerified = Boolean(document.getElementById('guardRequireVerify')?.checked);
+    const guardrails = {
+        attachments,
+        cooldownMs: Number.isFinite(cooldownMs) ? cooldownMs : 0,
+        requireVerified
+    };
+    socket.emit('adminGuardrailsSet', { socketId: selectedChat, guardrails });
+}
+
+function clearGuardrailsFromUi() {
+    if (!selectedChat) return;
+    const guardrails = { attachments: true, cooldownMs: 0, requireVerified: false };
+    socket.emit('adminGuardrailsSet', { socketId: selectedChat, guardrails });
+}
 
 function sendGuidedFixToSelectedChat() {
     if (!selectedChat) {
@@ -731,6 +766,17 @@ function setupSocketEvents() {
         }
     });
 
+    socket.on('adminGuardrailsState', (payload) => {
+        const socketId = payload?.socketId;
+        if (!socketId) return;
+        const g = payload?.guardrails || null;
+        if (g) guardrailsBySocket.set(String(socketId), g);
+        else guardrailsBySocket.delete(String(socketId));
+        if (selectedChat && String(selectedChat) === String(socketId)) {
+            hydrateGuardrailsInputs();
+        }
+    });
+
     socket.on('adminTickets', (list) => {
         const arr = Array.isArray(list) ? list : [];
         ticketsById = new Map(arr.map((t) => [t.id, t]));
@@ -1245,6 +1291,7 @@ function selectChat(socketId, el) {
     socket.emit('adminSelectConversation', { socketId });
 
     renderGuidedFixLive();
+    hydrateGuardrailsInputs();
 
     isAdminTyping = false;
     socket.emit('staffTyping', { socketId, isTyping: false });

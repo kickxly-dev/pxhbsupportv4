@@ -24,6 +24,8 @@ let spotlightState = { enabled: false, x: 0.5, y: 0.5, at: 0 };
 
 let guidedFixState = { enabled: false, id: null, title: null, steps: [], pingStepId: null, pingAt: 0 };
 
+let guardrailsState = { attachments: true, cooldownMs: 0, requireVerified: false };
+
 let preChatReady = false;
 
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -99,6 +101,16 @@ document.addEventListener('DOMContentLoaded', function () {
         handleLockdownUpdate(state);
     });
 
+    socket.on('guardrailsUpdate', (state) => {
+        const s = state && typeof state === 'object' ? state : {};
+        guardrailsState = {
+            attachments: s.attachments !== false,
+            cooldownMs: Number(s.cooldownMs || 0),
+            requireVerified: Boolean(s.requireVerified)
+        };
+        applyGuardrailsToUi();
+    });
+
     socket.on('staffTyping', (payload) => {
         updateStaffTyping(Boolean(payload && payload.isTyping), payload?.user || null);
     });
@@ -168,6 +180,49 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupLiveAssistCapture();
 });
+
+function applyGuardrailsToUi() {
+    const attachBtn = document.querySelector('.chat-attach-btn');
+    if (attachBtn) attachBtn.disabled = !preChatReady || guardrailsState.attachments === false;
+
+    const banner = document.getElementById('globalBanner');
+    if (!banner) return;
+    if (!preChatReady) return;
+    try {
+        if (document.body.classList.contains('lockdown-active')) return;
+    } catch {
+        // ignore
+    }
+
+    const parts = [];
+    if (guardrailsState.requireVerified) parts.push('Verification required');
+    const cd = Number(guardrailsState.cooldownMs || 0);
+    if (Number.isFinite(cd) && cd > 0) parts.push(`Slowmode ${Math.round(cd / 100) / 10}s`);
+    if (guardrailsState.attachments === false) parts.push('Attachments disabled');
+
+    if (!parts.length) {
+        if (banner.dataset.guardrails === '1') {
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+            banner.dataset.guardrails = '0';
+        }
+        return;
+    }
+
+    banner.dataset.guardrails = '1';
+    banner.style.display = 'block';
+    banner.innerHTML = `
+        <div class="banner-inner">
+            <div class="banner-left">
+                <div class="banner-title">Guardrails</div>
+                <div class="banner-text">${escapeHtml(parts.join(' • '))}</div>
+            </div>
+            <div class="banner-right">
+                <button class="banner-btn" onclick="this.closest('#globalBanner').style.display='none'">Dismiss</button>
+            </div>
+        </div>
+    `;
+}
 
 function ensureGuidedFixOverlay() {
     let el = document.getElementById('guidedFixOverlay');

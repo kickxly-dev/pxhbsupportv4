@@ -114,6 +114,30 @@
                                 <div class="spotlight-pad" id="spotlightPad" aria-label="Guidance pad"></div>
                             </div>
                             <div class="tool-row">
+                                <label>Guardrails</label>
+                                <label class="liveassist-toggle" style="justify-content:flex-start; gap:10px;">
+                                    <input type="checkbox" id="guardAttachments" onchange="applyGuardrailsFromUi()" checked>
+                                    <span>Allow Attachments</span>
+                                </label>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <select id="guardCooldown" onchange="applyGuardrailsFromUi()">
+                                        <option value="0">No slowmode</option>
+                                        <option value="1000">1s slowmode</option>
+                                        <option value="2000">2s slowmode</option>
+                                        <option value="5000">5s slowmode</option>
+                                        <option value="10000">10s slowmode</option>
+                                    </select>
+                                    <label class="liveassist-toggle" style="justify-content:flex-start; gap:10px;">
+                                        <input type="checkbox" id="guardRequireVerify" onchange="applyGuardrailsFromUi()">
+                                        <span>Require Verify</span>
+                                    </label>
+                                </div>
+                                <div class="guidedfix-admin-actions">
+                                    <button class="tool-btn" onclick="applyGuardrailsFromUi()">Apply</button>
+                                    <button class="tool-btn danger" onclick="clearGuardrailsFromUi()">Clear</button>
+                                </div>
+                            </div>
+                            <div class="tool-row">
                                 <label>Guided Fix</label>
                                 <input type="text" id="guidedFixTitle" placeholder="Title (optional)" maxlength="60">
                                 <textarea id="guidedFixSteps" placeholder="One step per line…" maxlength="1200"></textarea>

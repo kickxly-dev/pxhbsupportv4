@@ -432,6 +432,7 @@ function getConversationSummary(socketId) {
         banned: Boolean(conv.banned),
         verified: Boolean(conv.verified),
         guidance: conv.guidance || { enabled: false },
+        guardrails: conv.guardrails || { attachments: true, cooldownMs: 0, requireVerified: false },
         guidedFix: conv.guidedFix
             ? {
                   id: conv.guidedFix.id,
@@ -565,6 +566,7 @@ io.on('connection', (socket) => {
             clientMeta: null,
             liveAssist: { enabled: false },
             guidance: { enabled: false },
+            guardrails: { attachments: true, cooldownMs: 0, requireVerified: false },
             guidedFix: null,
             ticketId: null
         });
@@ -579,6 +581,10 @@ io.on('connection', (socket) => {
             ensureTicketForConversation(socket.id);
         }
         socket.emit('loadMessages', conv?.messages || []);
+
+        if (conv?.guardrails) {
+            socket.emit('guardrailsUpdate', conv.guardrails);
+        }
 
         if (conv?.guidance?.enabled && conv?.guidedFix) {
             socket.emit('guidanceFixState', {
@@ -637,6 +643,36 @@ io.on('connection', (socket) => {
                 socketId: socket.id
             });
             return;
+        }
+
+        if (conv?.guardrails?.requireVerified && !conv.verified) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Verification required before you can chat. Please complete verification.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+
+        const cooldown = Number(conv?.guardrails?.cooldownMs || 0);
+        if (Number.isFinite(cooldown) && cooldown > 0) {
+            const lastAt = Number(socket.data.lastGuardMsgAt || 0);
+            const now2 = Date.now();
+            if (lastAt && now2 - lastAt < cooldown) {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: `Slowmode is active. Please wait ${Math.ceil((cooldown - (now2 - lastAt)) / 1000)}s.`,
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                return;
+            }
+            socket.data.lastGuardMsgAt = now2;
         }
 
         const limit = recordAndCheckRate({ socket, kind: 'message' });
@@ -778,6 +814,48 @@ io.on('connection', (socket) => {
         if (!conv) return;
         if (conv.banned) return;
         if (conv.mutedUntil && Date.now() < Number(new Date(conv.mutedUntil))) return;
+
+        if (conv?.guardrails?.requireVerified && !conv.verified) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Verification required before you can upload.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+
+        if (conv?.guardrails && conv.guardrails.attachments === false) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Attachments are temporarily disabled for this chat.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+
+        const cooldown = Number(conv?.guardrails?.cooldownMs || 0);
+        if (Number.isFinite(cooldown) && cooldown > 0) {
+            const lastAt = Number(socket.data.lastGuardUploadAt || 0);
+            const now = Date.now();
+            if (lastAt && now - lastAt < cooldown) {
+                socket.emit('newMessage', {
+                    id: Date.now(),
+                    user: 'System',
+                    text: `Slowmode is active. Please wait ${Math.ceil((cooldown - (now - lastAt)) / 1000)}s before uploading again.`,
+                    timestamp: new Date(),
+                    type: 'system',
+                    socketId: socket.id
+                });
+                return;
+            }
+            socket.data.lastGuardUploadAt = now;
+        }
 
         const limit = recordAndCheckRate({ socket, kind: 'image' });
         if (!limit.ok) {
@@ -1404,7 +1482,35 @@ io.on('connection', (socket) => {
         }
 
         socket.emit('adminGuidanceFixState', { socketId, guidedFix: conv.guidedFix || null });
+        socket.emit('adminGuardrailsState', { socketId, guardrails: conv.guardrails || { attachments: true, cooldownMs: 0, requireVerified: false } });
         broadcastAdminConversations();
+    });
+
+    socket.on('adminGuardrailsSet', ({ socketId, guardrails }) => {
+        if (!isStaff) return;
+        const sid = safeText(socketId, 64);
+        if (!sid || !conversations.has(sid)) return;
+        const conv = conversations.get(sid);
+        if (!conv) return;
+
+        const g = guardrails && typeof guardrails === 'object' ? guardrails : {};
+        const attachments = g.attachments !== false;
+        const cooldownMs = Math.max(0, Math.min(Number(g.cooldownMs || 0), 60_000));
+        const requireVerified = Boolean(g.requireVerified);
+        conv.guardrails = { attachments, cooldownMs: Number.isFinite(cooldownMs) ? cooldownMs : 0, requireVerified };
+        conv.lastSeenAt = new Date().toISOString();
+
+        io.to(sid).emit('guardrailsUpdate', conv.guardrails);
+        io.to('admins').emit('adminGuardrailsState', { socketId: sid, guardrails: conv.guardrails });
+        broadcastAdminConversations();
+
+        pushAudit({
+            type: 'staff',
+            action: 'guardrails_set',
+            by: staffStatus.user || 'Staff',
+            socketId: sid,
+            details: conv.guardrails
+        });
     });
 
     // Admin: send message to a user
