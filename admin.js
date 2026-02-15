@@ -1,5 +1,59 @@
 // P.X HB Admin Panel JavaScript
 const socket = io({ auth: { admin: true } });
+
+function setOpsSfxFromUi() {
+    opsSfxEnabled = Boolean(document.getElementById('opsSfxToggle')?.checked);
+    try {
+        sessionStorage.setItem('opsSfxEnabled', opsSfxEnabled ? 'true' : 'false');
+    } catch {
+        // ignore
+    }
+}
+
+function setOpsCinematicFromUi() {
+    opsCinematicEnabled = Boolean(document.getElementById('opsCinematicToggle')?.checked);
+    try {
+        sessionStorage.setItem('opsCinematicEnabled', opsCinematicEnabled ? 'true' : 'false');
+    } catch {
+        // ignore
+    }
+    applyOpsCinematicClass();
+}
+
+function applyOpsCinematicClass() {
+    try {
+        if (opsCinematicEnabled) document.body.classList.add('ops-cinematic');
+        else document.body.classList.remove('ops-cinematic');
+    } catch {
+        // ignore
+    }
+}
+
+function playOpsAlertTone() {
+    try {
+        if (!opsSfxEnabled) return;
+        if (!adminAudioUnlocked || !adminAudioCtx) return;
+        const nowMs = Date.now();
+        if (nowMs - opsLastAlertAt < 1500) return;
+        opsLastAlertAt = nowMs;
+
+        const t = adminAudioCtx.currentTime;
+        const osc = adminAudioCtx.createOscillator();
+        const gain = adminAudioCtx.createGain();
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        osc.frequency.setValueAtTime(740, t);
+        osc.frequency.linearRampToValueAtTime(980, t + 0.12);
+        osc.connect(gain);
+        gain.connect(adminAudioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.24);
+    } catch {
+        // ignore
+    }
+}
 let currentSection = 'dashboard';
 let selectedChat = null;
 let conversationsById = new Map();
@@ -31,6 +85,10 @@ let warRoomState = { snapshot: null };
 
 let selectedWarChat = null;
 
+let opsSfxEnabled = false;
+let opsCinematicEnabled = true;
+let opsLastAlertAt = 0;
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -56,6 +114,18 @@ document.addEventListener('DOMContentLoaded', function () {
     loadDashboardData();
     setupSocketEvents();
     socket.emit('adminInit');
+
+    try {
+        opsSfxEnabled = sessionStorage.getItem('opsSfxEnabled') === 'true';
+        opsCinematicEnabled = sessionStorage.getItem('opsCinematicEnabled') !== 'false';
+    } catch {
+        // ignore
+    }
+    const sfx = document.getElementById('opsSfxToggle');
+    const cin = document.getElementById('opsCinematicToggle');
+    if (sfx) sfx.checked = opsSfxEnabled;
+    if (cin) cin.checked = opsCinematicEnabled;
+    applyOpsCinematicClass();
 
     const input = document.getElementById('adminChatInput');
     if (input) {
@@ -184,6 +254,18 @@ function clearGuardrailsFromUi() {
 function renderWarRoom(snapshot) {
     const s = snapshot && typeof snapshot === 'object' ? snapshot : null;
     warRoomState.snapshot = s;
+
+    try {
+        const war = document.getElementById('warroom');
+        const hasDanger = Array.isArray(s?.alerts) && s.alerts.some((a) => String(a?.level || '') === 'danger');
+        if (war) {
+            if (hasDanger) war.classList.add('warroom-hot');
+            else war.classList.remove('warroom-hot');
+        }
+        if (hasDanger) playOpsAlertTone();
+    } catch {
+        // ignore
+    }
 
     const kAu = document.getElementById('warKpiActiveUsers');
     const kOt = document.getElementById('warKpiOpenTickets');
@@ -1436,6 +1518,13 @@ function switchSection(sectionId, btn) {
 
     if (btn && btn.classList) {
         btn.classList.add('active');
+    }
+
+    try {
+        if (sectionId === 'warroom') document.body.classList.add('warroom-active');
+        else document.body.classList.remove('warroom-active');
+    } catch {
+        // ignore
     }
 }
 

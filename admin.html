@@ -131,6 +131,16 @@
                             <button class="tool-btn" onclick="socket.emit('adminWarRoomRequest')">Refresh War Room</button>
                             <button class="tool-btn danger" onclick="toggleLockdownFromUi()">Toggle Lockdown</button>
                         </div>
+                        <div class="warroom-ops-controls">
+                            <label class="liveassist-toggle" style="justify-content:flex-start; gap:10px;">
+                                <input type="checkbox" id="opsSfxToggle" onchange="setOpsSfxFromUi()">
+                                <span>Ops SFX</span>
+                            </label>
+                            <label class="liveassist-toggle" style="justify-content:flex-start; gap:10px;">
+                                <input type="checkbox" id="opsCinematicToggle" onchange="setOpsCinematicFromUi()" checked>
+                                <span>Cinematic</span>
+                            </label>
+                        </div>
                         <div class="warroom-presets" id="warPresets">
                             <div class="warroom-presets-title">Guardrails presets (use on Hot Chats)</div>
                             <div class="warroom-presets-row">

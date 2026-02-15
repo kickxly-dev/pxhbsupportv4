@@ -19,6 +19,29 @@
     --panel-2: rgba(18, 18, 22, 0.62);
 }
 
+@keyframes warroomEnter {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+        filter: blur(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+@keyframes opsScanlines {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 0 0, 0 140px; }
+}
+
+@keyframes warroomHotPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255, 77, 79, 0.0); }
+    50% { box-shadow: 0 0 0 10px rgba(255, 77, 79, 0.08); }
+}
+
 @keyframes toastIn {
     from {
         transform: translate3d(0, -10px, 0);
@@ -2205,10 +2228,42 @@ nav:hover {
     display: block;
 }
 
+body.warroom-active.ops-cinematic {
+    background-image:
+        radial-gradient(circle at 20% 10%, rgba(255, 106, 0, 0.14), transparent 55%),
+        radial-gradient(circle at 80% 30%, rgba(255, 106, 0, 0.08), transparent 60%),
+        linear-gradient(180deg, rgba(255, 106, 0, 0.06), transparent 35%),
+        repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.00) 0px,
+            rgba(255, 255, 255, 0.00) 6px,
+            rgba(255, 255, 255, 0.015) 7px
+        );
+    animation: opsScanlines 6.2s linear infinite;
+}
+
+#warroom.active {
+    animation: warroomEnter 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#warroom.warroom-hot {
+    border-color: rgba(255, 77, 79, 0.25);
+    animation: warroomHotPulse 1.2s ease-in-out infinite;
+}
+
 .warroom-grid {
     display: grid;
     grid-template-columns: 1.1fr 1fr;
     gap: 16px;
+}
+
+.warroom-ops-controls {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .warroom-card {
