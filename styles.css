@@ -19,6 +19,46 @@
     --panel-2: rgba(18, 18, 22, 0.62);
 }
 
+@keyframes lockdownPulse {
+    0% {
+        box-shadow: 0 0 0 rgba(255, 60, 60, 0.0);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(255, 60, 60, 0.18);
+    }
+    100% {
+        box-shadow: 0 0 0 rgba(255, 60, 60, 0.0);
+    }
+}
+
+body.lockdown-active {
+    --orange-primary: #ff3b3b;
+    --orange-glow: #ff6b6b;
+}
+
+body.lockdown-active .admin-header,
+body.lockdown-active nav {
+    border-bottom-color: rgba(255, 60, 60, 0.35);
+}
+
+body.lockdown-active .admin-logo .logo-badge,
+body.lockdown-active .logo-badge {
+    background: linear-gradient(135deg, rgba(255, 60, 60, 0.95), rgba(255, 106, 0, 0.65));
+}
+
+body.lockdown-active .chat-widget,
+body.lockdown-active .chat-window,
+body.lockdown-active .ticket-list,
+body.lockdown-active .ticket-detail {
+    border-color: rgba(255, 60, 60, 0.30) !important;
+    animation: lockdownPulse 1.05s ease-in-out infinite;
+}
+
+body.lockdown-active .chat-send-btn,
+body.lockdown-active .tool-btn {
+    background: linear-gradient(135deg, rgba(255, 60, 60, 0.92), rgba(255, 106, 0, 0.62));
+}
+
 .hero-subtitle {
     max-width: 60ch;
 }

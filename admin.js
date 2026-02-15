@@ -11,6 +11,10 @@ let ticketFilter = 'open';
 let isAdminTyping = false;
 let adminTypingTimer = null;
 
+let adminAudioCtx = null;
+let adminAudioUnlocked = false;
+let adminLockdownAlarm = { osc: null, gain: null, timer: null };
+
 const CANNED_RESPONSES = {
     '1': 'Thanks for reaching out — what’s your username and what happened?',
     '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
@@ -31,6 +35,24 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('input', () => emitAdminTyping(true));
         input.addEventListener('blur', () => emitAdminTyping(false));
     }
+
+    const unlock = () => {
+        try {
+            if (!adminAudioCtx) {
+                adminAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (adminAudioCtx && adminAudioCtx.state === 'suspended') {
+                adminAudioCtx.resume();
+            }
+            adminAudioUnlocked = true;
+        } catch {
+            // ignore
+        }
+        document.removeEventListener('pointerdown', unlock, true);
+        document.removeEventListener('keydown', unlock, true);
+    };
+    document.addEventListener('pointerdown', unlock, true);
+    document.addEventListener('keydown', unlock, true);
 
     document.addEventListener('keydown', handleAdminHotkeys);
 });
@@ -364,6 +386,22 @@ function setupSocketEvents() {
         if (toggle) toggle.checked = enabled;
         const reason = state && state.reason ? String(state.reason) : '';
         showAdminToast(enabled ? `Lockdown enabled${reason ? `: ${reason}` : ''}` : 'Lockdown disabled');
+
+        try {
+            if (enabled) {
+                document.body.classList.add('lockdown-active');
+            } else {
+                document.body.classList.remove('lockdown-active');
+            }
+        } catch {
+            // ignore
+        }
+
+        if (enabled) {
+            startAdminLockdownAlarm();
+        } else {
+            stopAdminLockdownAlarm();
+        }
     });
 }
 
@@ -382,6 +420,62 @@ function showAdminToast(text) {
     el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,106,0,0.25);color:white;padding:12px 14px;border-radius:12px;z-index:10000;max-width:360px;font-weight:800;';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2200);
+}
+
+function startAdminLockdownAlarm() {
+    try {
+        if (!adminAudioUnlocked) return;
+        if (!adminAudioCtx) return;
+        if (adminLockdownAlarm.osc) return;
+
+        const now = adminAudioCtx.currentTime;
+        const osc = adminAudioCtx.createOscillator();
+        const gain = adminAudioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.06, now + 0.05);
+
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.35);
+        osc.frequency.linearRampToValueAtTime(520, now + 0.7);
+
+        osc.connect(gain);
+        gain.connect(adminAudioCtx.destination);
+        osc.start(now);
+
+        const lfo = () => {
+            if (!adminLockdownAlarm.osc) return;
+            const t = adminAudioCtx.currentTime;
+            adminLockdownAlarm.osc.frequency.cancelScheduledValues(t);
+            adminLockdownAlarm.osc.frequency.setValueAtTime(520, t);
+            adminLockdownAlarm.osc.frequency.linearRampToValueAtTime(880, t + 0.35);
+            adminLockdownAlarm.osc.frequency.linearRampToValueAtTime(520, t + 0.7);
+        };
+        const timer = setInterval(lfo, 700);
+
+        adminLockdownAlarm = { osc, gain, timer };
+    } catch {
+        // ignore
+    }
+}
+
+function stopAdminLockdownAlarm() {
+    try {
+        if (adminLockdownAlarm.timer) clearInterval(adminLockdownAlarm.timer);
+        if (adminLockdownAlarm.gain && adminAudioCtx) {
+            const now = adminAudioCtx.currentTime;
+            adminLockdownAlarm.gain.gain.cancelScheduledValues(now);
+            adminLockdownAlarm.gain.gain.setValueAtTime(adminLockdownAlarm.gain.gain.value || 0.0001, now);
+            adminLockdownAlarm.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        }
+        if (adminLockdownAlarm.osc && adminAudioCtx) {
+            adminLockdownAlarm.osc.stop(adminAudioCtx.currentTime + 0.13);
+        }
+    } catch {
+        // ignore
+    }
+    adminLockdownAlarm = { osc: null, gain: null, timer: null };
 }
 
 function emitAdminTyping(next) {

@@ -11,6 +11,8 @@ let defaultStatusLabel = 'Support Team';
 let audioCtx = null;
 let audioUnlocked = false;
 
+let lockdownAlarm = { osc: null, gain: null };
+
 let displayName = 'User';
 
 let preChatReady = false;
@@ -97,6 +99,16 @@ function handleLockdownUpdate(state) {
     const attachBtn = document.querySelector('.chat-attach-btn');
     const reason = state && state.reason ? String(state.reason) : '';
 
+    try {
+        if (enabled) {
+            document.body.classList.add('lockdown-active');
+        } else {
+            document.body.classList.remove('lockdown-active');
+        }
+    } catch {
+        // ignore
+    }
+
     if (enabled) {
         if (input) input.disabled = true;
         if (sendBtn) sendBtn.disabled = true;
@@ -104,6 +116,8 @@ function handleLockdownUpdate(state) {
         addMessage(reason ? `Chat locked: ${reason}` : 'Chat is temporarily locked by staff.', 'system');
         const statusText = document.querySelector('.chat-status span:last-child');
         if (statusText) statusText.textContent = 'Support Team - Locked';
+
+        startLockdownAlarm();
     } else {
         if (preChatReady) {
             if (input) input.disabled = false;
@@ -112,7 +126,66 @@ function handleLockdownUpdate(state) {
         }
         const statusText = document.querySelector('.chat-status span:last-child');
         if (statusText) statusText.textContent = defaultStatusLabel;
+
+        stopLockdownAlarm();
     }
+}
+
+function startLockdownAlarm() {
+    try {
+        if (!audioUnlocked) return;
+        if (!audioCtx) return;
+        if (lockdownAlarm.osc) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.05);
+
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.35);
+        osc.frequency.linearRampToValueAtTime(520, now + 0.7);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+
+        const lfo = () => {
+            if (!lockdownAlarm.osc) return;
+            const t = audioCtx.currentTime;
+            lockdownAlarm.osc.frequency.cancelScheduledValues(t);
+            lockdownAlarm.osc.frequency.setValueAtTime(520, t);
+            lockdownAlarm.osc.frequency.linearRampToValueAtTime(880, t + 0.35);
+            lockdownAlarm.osc.frequency.linearRampToValueAtTime(520, t + 0.7);
+        };
+        const timer = setInterval(lfo, 700);
+
+        lockdownAlarm = { osc, gain, timer };
+    } catch {
+        // ignore
+    }
+}
+
+function stopLockdownAlarm() {
+    try {
+        if (lockdownAlarm.timer) clearInterval(lockdownAlarm.timer);
+        if (lockdownAlarm.gain && audioCtx) {
+            const now = audioCtx.currentTime;
+            lockdownAlarm.gain.gain.cancelScheduledValues(now);
+            lockdownAlarm.gain.gain.setValueAtTime(lockdownAlarm.gain.gain.value || 0.0001, now);
+            lockdownAlarm.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        }
+        if (lockdownAlarm.osc && audioCtx) {
+            lockdownAlarm.osc.stop(audioCtx.currentTime + 0.13);
+        }
+    } catch {
+        // ignore
+    }
+    lockdownAlarm = { osc: null, gain: null, timer: null };
 }
 
 function initPreChatGate() {
