@@ -553,6 +553,7 @@ io.on('connection', (socket) => {
             verifyChallenge: null,
             lastSeenAt: new Date().toISOString(),
             clientMeta: null,
+            liveAssist: { enabled: false },
             ticketId: null
         });
         broadcastAdminConversations();
@@ -968,6 +969,49 @@ io.on('connection', (socket) => {
             socketId: socket.id,
             details: { kind: 'pdf', name, size }
         });
+    });
+
+    socket.on('liveAssistOptIn', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        const enabled = Boolean(payload && payload.enabled);
+        conv.liveAssist = { enabled: enabled };
+        conv.lastSeenAt = new Date().toISOString();
+        broadcastAdminConversations();
+        pushAudit({
+            type: 'liveassist',
+            action: enabled ? 'opt_in' : 'opt_out',
+            by: conv.name || 'user',
+            socketId: socket.id,
+            details: {}
+        });
+    });
+
+    socket.on('liveAssistCursor', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv?.liveAssist?.enabled) return;
+        const x = Number(payload && payload.x);
+        const y = Number(payload && payload.y);
+        const w = Number(payload && payload.w);
+        const h = Number(payload && payload.h);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return;
+        if (w <= 0 || h <= 0) return;
+        io.to('admins').emit('adminLiveAssistCursor', { socketId: socket.id, x, y, w, h, at: Date.now() });
+    });
+
+    socket.on('liveAssistClick', (payload) => {
+        if (isStaff) return;
+        const conv = conversations.get(socket.id);
+        if (!conv?.liveAssist?.enabled) return;
+        const x = Number(payload && payload.x);
+        const y = Number(payload && payload.y);
+        const w = Number(payload && payload.w);
+        const h = Number(payload && payload.h);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) return;
+        if (w <= 0 || h <= 0) return;
+        io.to('admins').emit('adminLiveAssistClick', { socketId: socket.id, x, y, w, h, at: Date.now() });
     });
 
     socket.on('setUserName', (payload) => {

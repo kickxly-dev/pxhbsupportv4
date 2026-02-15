@@ -104,6 +104,13 @@
                                 <button onclick="sendQuickMessage('I have a technical issue')" class="quick-action-btn">Technical Issue</button>
                                 <button onclick="sendQuickMessage('I need billing support')" class="quick-action-btn">Billing</button>
                             </div>
+                            <div class="liveassist-row">
+                                <label class="liveassist-toggle">
+                                    <input type="checkbox" id="liveAssistToggle" onchange="setLiveAssistOptInFromUi()">
+                                    <span>Allow Live Assist</span>
+                                </label>
+                                <span class="liveassist-hint">(optional)</span>
+                            </div>
                             <div class="chat-input-wrapper">
                                 <input type="file" id="chatImageInput" accept="image/png,image/jpeg,image/webp,application/pdf" style="display:none;" onchange="handleChatImageSelected(event)">
                                 <button onclick="openChatImagePicker()" class="chat-attach-btn" aria-label="Upload image">

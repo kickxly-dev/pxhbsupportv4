@@ -19,6 +19,8 @@ let adminAuditLog = [];
 
 let ticketEvidenceById = new Map();
 
+let liveAssistBySocket = new Map();
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -528,6 +530,36 @@ function setupSocketEvents() {
         }
     });
 
+    socket.on('adminLiveAssistCursor', (payload) => {
+        const socketId = payload?.socketId;
+        if (!socketId) return;
+        liveAssistBySocket.set(String(socketId), {
+            kind: 'cursor',
+            x: Number(payload?.x || 0),
+            y: Number(payload?.y || 0),
+            w: Number(payload?.w || 1),
+            h: Number(payload?.h || 1),
+            at: Number(payload?.at || Date.now())
+        });
+        renderLiveAssistOverlay(String(socketId));
+    });
+
+    socket.on('adminLiveAssistClick', (payload) => {
+        const socketId = payload?.socketId;
+        if (!socketId) return;
+        const state = {
+            kind: 'click',
+            x: Number(payload?.x || 0),
+            y: Number(payload?.y || 0),
+            w: Number(payload?.w || 1),
+            h: Number(payload?.h || 1),
+            at: Number(payload?.at || Date.now())
+        };
+        liveAssistBySocket.set(String(socketId), state);
+        renderLiveAssistOverlay(String(socketId));
+        spawnLiveAssistClick(String(socketId), state);
+    });
+
     socket.on('adminTickets', (list) => {
         const arr = Array.isArray(list) ? list : [];
         ticketsById = new Map(arr.map((t) => [t.id, t]));
@@ -633,6 +665,74 @@ function setupSocketEvents() {
         if (!entry) return;
         adminAuditLog = [...adminAuditLog, entry].slice(-250);
         renderAuditLog();
+    });
+}
+
+function ensureLiveAssistLayer(container, id) {
+    if (!container) return null;
+    let layer = container.querySelector(`.liveassist-layer[data-la="${CSS.escape(id)}"]`);
+    if (layer) return layer;
+    layer = document.createElement('div');
+    layer.className = 'liveassist-layer';
+    layer.dataset.la = id;
+    try {
+        const pos = window.getComputedStyle(container).position;
+        if (pos === 'static' || !pos) {
+            container.style.position = 'relative';
+        }
+    } catch {
+        container.style.position = 'relative';
+    }
+    container.appendChild(layer);
+    return layer;
+}
+
+function renderLiveAssistOverlay(socketId) {
+    const state = liveAssistBySocket.get(String(socketId));
+    if (!state) return;
+
+    const targets = [];
+    const chatPane = document.getElementById('adminChatMessages');
+    if (selectedChat && String(selectedChat) === String(socketId) && chatPane) targets.push(chatPane);
+    const ticketPane = document.getElementById('ticketDetail');
+    const t = selectedTicketId ? ticketsById.get(String(selectedTicketId)) : null;
+    if (t && String(t.socketId) === String(socketId) && ticketPane) targets.push(ticketPane);
+
+    targets.forEach((container) => {
+        const layer = ensureLiveAssistLayer(container, String(socketId));
+        if (!layer) return;
+        layer.innerHTML = '';
+        if (state.kind !== 'cursor') return;
+
+        const xPct = Math.max(0, Math.min(1, state.w ? state.x / state.w : 0));
+        const yPct = Math.max(0, Math.min(1, state.h ? state.y / state.h : 0));
+        const dot = document.createElement('div');
+        dot.className = 'liveassist-cursor';
+        dot.style.left = `${Math.round(xPct * 1000) / 10}%`;
+        dot.style.top = `${Math.round(yPct * 1000) / 10}%`;
+        layer.appendChild(dot);
+    });
+}
+
+function spawnLiveAssistClick(socketId, state) {
+    const containers = [];
+    const chatPane = document.getElementById('adminChatMessages');
+    if (selectedChat && String(selectedChat) === String(socketId) && chatPane) containers.push(chatPane);
+    const ticketPane = document.getElementById('ticketDetail');
+    const t = selectedTicketId ? ticketsById.get(String(selectedTicketId)) : null;
+    if (t && String(t.socketId) === String(socketId) && ticketPane) containers.push(ticketPane);
+
+    containers.forEach((container) => {
+        const layer = ensureLiveAssistLayer(container, String(socketId));
+        if (!layer) return;
+        const xPct = Math.max(0, Math.min(1, state.w ? state.x / state.w : 0));
+        const yPct = Math.max(0, Math.min(1, state.h ? state.y / state.h : 0));
+        const ripple = document.createElement('div');
+        ripple.className = 'liveassist-click';
+        ripple.style.left = `${Math.round(xPct * 1000) / 10}%`;
+        ripple.style.top = `${Math.round(yPct * 1000) / 10}%`;
+        layer.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 900);
     });
 }
 

@@ -15,6 +15,10 @@ let lockdownAlarm = { osc: null, gain: null };
 
 let displayName = 'User';
 
+let liveAssistOptIn = false;
+let liveAssistCursorTimer = null;
+let lastLiveAssistSentAt = 0;
+
 let preChatReady = false;
 
 const clientId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -94,7 +98,59 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     setupAudioUnlock();
+
+    try {
+        const t = document.getElementById('liveAssistToggle');
+        if (t) t.checked = false;
+    } catch {
+        // ignore
+    }
+
+    setupLiveAssistCapture();
 });
+
+function setLiveAssistOptInFromUi() {
+    const enabled = Boolean(document.getElementById('liveAssistToggle')?.checked);
+    liveAssistOptIn = enabled;
+    socket.emit('liveAssistOptIn', { enabled });
+}
+
+function setupLiveAssistCapture() {
+    if (liveAssistCursorTimer) return;
+    const onMove = (ev) => {
+        if (!liveAssistOptIn) return;
+        if (document.visibilityState !== 'visible') return;
+        const now = Date.now();
+        if (now - lastLiveAssistSentAt < 50) return;
+        lastLiveAssistSentAt = now;
+
+        const x = Math.max(0, Math.min(window.innerWidth, Number(ev.clientX || 0)));
+        const y = Math.max(0, Math.min(window.innerHeight, Number(ev.clientY || 0)));
+        socket.emit('liveAssistCursor', { x, y, w: window.innerWidth, h: window.innerHeight, at: now });
+    };
+
+    const onClick = (ev) => {
+        if (!liveAssistOptIn) return;
+        if (document.visibilityState !== 'visible') return;
+        const now = Date.now();
+        const x = Math.max(0, Math.min(window.innerWidth, Number(ev.clientX || 0)));
+        const y = Math.max(0, Math.min(window.innerHeight, Number(ev.clientY || 0)));
+        socket.emit('liveAssistClick', { x, y, w: window.innerWidth, h: window.innerHeight, at: now });
+    };
+
+    const onVis = () => {
+        // Visibility gate happens in onMove/onClick
+    };
+
+    try {
+        window.addEventListener('mousemove', onMove, { passive: true });
+        window.addEventListener('click', onClick, { passive: true });
+        document.addEventListener('visibilitychange', onVis);
+        liveAssistCursorTimer = { onMove, onClick, onVis };
+    } catch {
+        // ignore
+    }
+}
 
 function handleLockdownUpdate(state) {
     const enabled = Boolean(state && state.enabled);
