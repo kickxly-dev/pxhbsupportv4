@@ -23,6 +23,10 @@
                     <i class="fas fa-chart-line"></i>
                     Dashboard
                 </button>
+                <button class="admin-btn" onclick="showWarRoom(this)">
+                    <i class="fas fa-shield-halved"></i>
+                    War Room
+                </button>
                 <button class="admin-btn" onclick="showChats(this)">
                     <i class="fas fa-comments"></i>
                     Chats
@@ -75,6 +79,54 @@
                         </div>
                         <div class="stat-value" id="avgResponse">0s</div>
                         <div class="stat-label">Avg Response</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-section" id="warroom">
+                <h2 class="section-title">🛡️ War Room</h2>
+                <div class="warroom-grid">
+                    <div class="warroom-card">
+                        <div class="warroom-card-title">Now</div>
+                        <div class="warroom-kpis">
+                            <div class="warroom-kpi">
+                                <div class="warroom-kpi-label">Active users</div>
+                                <div class="warroom-kpi-value" id="warKpiActiveUsers">0</div>
+                            </div>
+                            <div class="warroom-kpi">
+                                <div class="warroom-kpi-label">Open tickets</div>
+                                <div class="warroom-kpi-value" id="warKpiOpenTickets">0</div>
+                            </div>
+                            <div class="warroom-kpi">
+                                <div class="warroom-kpi-label">Pending</div>
+                                <div class="warroom-kpi-value" id="warKpiPendingTickets">0</div>
+                            </div>
+                            <div class="warroom-kpi">
+                                <div class="warroom-kpi-label">Staff online</div>
+                                <div class="warroom-kpi-value" id="warKpiStaffOnline">0</div>
+                            </div>
+                        </div>
+                        <div class="warroom-alerts" id="warAlerts">—</div>
+                    </div>
+
+                    <div class="warroom-card">
+                        <div class="warroom-card-title">Hot Tickets</div>
+                        <div class="warroom-list" id="warHotTickets">—</div>
+                    </div>
+
+                    <div class="warroom-card">
+                        <div class="warroom-card-title">Hot Chats</div>
+                        <div class="warroom-list" id="warHotChats">—</div>
+                    </div>
+
+                    <div class="warroom-card">
+                        <div class="warroom-card-title">Quick Actions</div>
+                        <div class="warroom-actions">
+                            <button class="tool-btn" onclick="socket.emit('adminInit')">Refresh Lists</button>
+                            <button class="tool-btn" onclick="socket.emit('adminWarRoomRequest')">Refresh War Room</button>
+                            <button class="tool-btn danger" onclick="toggleLockdownFromUi()">Toggle Lockdown</button>
+                        </div>
+                        <div class="warroom-footer" id="warLastUpdated">—</div>
                     </div>
                 </div>
             </section>

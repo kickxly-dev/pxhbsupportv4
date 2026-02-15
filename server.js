@@ -409,6 +409,91 @@ function broadcastAdminTickets() {
     io.to('admins').emit('adminTickets', list);
 }
 
+function buildWarRoomSnapshot() {
+    const convList = Array.from(conversations.keys())
+        .map(getConversationSummary)
+        .filter(Boolean);
+    const ticketList = Array.from(tickets.values())
+        .map(getTicketSummary)
+        .filter(Boolean);
+
+    const activeUsers = convList.filter((c) => c && c.connected).length;
+    const openTickets = ticketList.filter((t) => String(t?.status || 'open') === 'open').length;
+    const pendingTickets = ticketList.filter((t) => String(t?.status || '') === 'pending').length;
+
+    const alerts = [];
+    if (lockdownState && lockdownState.enabled) {
+        alerts.push({ level: 'danger', text: `Lockdown active${lockdownState.reason ? `: ${lockdownState.reason}` : ''}` });
+    }
+
+    const urgentOpen = ticketList.filter((t) => String(t?.status || 'open') === 'open' && String(t?.priority || '') === 'urgent');
+    if (urgentOpen.length) {
+        alerts.push({ level: 'warning', text: `${urgentOpen.length} urgent ticket(s) open` });
+    }
+
+    const unclaimedOpen = ticketList.filter((t) => String(t?.status || 'open') === 'open' && !t?.claim?.user);
+    if (unclaimedOpen.length >= 3) {
+        alerts.push({ level: 'info', text: `${unclaimedOpen.length} open ticket(s) unclaimed` });
+    }
+
+    const hotTickets = ticketList
+        .slice()
+        .sort((a, b) => {
+            const score = (t) => {
+                const unread = Number(t?.unread || 0);
+                const pri = String(t?.priority || 'normal');
+                const priScore = pri === 'urgent' ? 100 : pri === 'high' ? 40 : pri === 'normal' ? 10 : 0;
+                const claimPenalty = t?.claim?.user ? -5 : 10;
+                const age = t?.updatedAt ? Date.now() - new Date(t.updatedAt).getTime() : 0;
+                const ageScore = Math.min(20, Math.floor(age / 60_000));
+                return unread * 8 + priScore + claimPenalty + ageScore;
+            };
+            return score(b) - score(a);
+        })
+        .slice(0, 12);
+
+    const hotChats = convList
+        .slice()
+        .sort((a, b) => {
+            const score = (c) => {
+                const unread = Number(c?.unread || 0);
+                const verifiedPenalty = c?.verified ? 0 : 5;
+                const connectedBonus = c?.connected ? 5 : 0;
+                return unread * 10 + verifiedPenalty + connectedBonus;
+            };
+            return score(b) - score(a);
+        })
+        .slice(0, 12)
+        .map((c) => ({
+            socketId: c.socketId,
+            name: c.name || null,
+            connected: Boolean(c.connected),
+            verified: Boolean(c.verified),
+            unread: Number(c.unread || 0)
+        }));
+
+    return {
+        at: new Date().toISOString(),
+        kpis: {
+            activeUsers,
+            openTickets,
+            pendingTickets,
+            staffOnline: staffStatus.isOnline ? 1 : 0
+        },
+        alerts,
+        hotTickets,
+        hotChats
+    };
+}
+
+function broadcastAdminWarRoom() {
+    try {
+        io.to('admins').emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
+    } catch {
+        // ignore
+    }
+}
+
 function findLastUserMessageId(conv) {
     if (!conv || !Array.isArray(conv.messages)) return null;
     for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
@@ -471,6 +556,7 @@ function broadcastAdminConversations() {
         });
     io.to('admins').emit('adminConversations', list);
     broadcastAdminTickets();
+    broadcastAdminWarRoom();
 }
 
 // Serve main site
@@ -1340,6 +1426,12 @@ io.on('connection', (socket) => {
     socket.on('preChatSubmit', (payload) => {
         if (isStaff) return;
 
+        socket.emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
+    });
+
+    socket.on('adminWarRoomRequest', () => {
+        if (!isStaff) return;
+        socket.emit('adminWarRoomSnapshot', buildWarRoomSnapshot());
         if (lockdownState.enabled) {
             socket.emit('newMessage', {
                 id: Date.now(),

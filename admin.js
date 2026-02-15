@@ -27,6 +27,8 @@ let guidedFixBySocket = new Map();
 
 let guardrailsBySocket = new Map();
 
+let warRoomState = { snapshot: null };
+
 let replayState = {
     isOpen: false,
     isPlaying: false,
@@ -80,6 +82,30 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', handleAdminHotkeys);
 });
 
+function openTicketFromWarRoom(ticketId) {
+    const id = String(ticketId || '').trim();
+    if (!id) return;
+    const btn = document.querySelector('.admin-nav .admin-btn[onclick^="showTickets"]') || null;
+    showTickets(btn);
+    setTimeout(() => {
+        const el = document.querySelector(`.ticket-item[data-ticket-id="${CSS.escape(id)}"]`);
+        selectTicket(id, el);
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    }, 80);
+}
+
+function openChatFromWarRoom(socketId) {
+    const sid = String(socketId || '').trim();
+    if (!sid) return;
+    const btn = document.querySelector('.admin-nav .admin-btn[onclick^="showChats"]') || null;
+    showChats(btn);
+    setTimeout(() => {
+        const el = document.querySelector(`.chat-item[data-socket-id="${CSS.escape(sid)}"]`);
+        selectChat(sid, el);
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    }, 80);
+}
+
 function hydrateGuardrailsInputs() {
     if (!selectedChat) return;
     const g = guardrailsBySocket.get(String(selectedChat)) || { attachments: true, cooldownMs: 0, requireVerified: false };
@@ -111,6 +137,100 @@ function clearGuardrailsFromUi() {
     if (!selectedChat) return;
     const guardrails = { attachments: true, cooldownMs: 0, requireVerified: false };
     socket.emit('adminGuardrailsSet', { socketId: selectedChat, guardrails });
+}
+
+function renderWarRoom(snapshot) {
+    const s = snapshot && typeof snapshot === 'object' ? snapshot : null;
+    warRoomState.snapshot = s;
+
+    const kAu = document.getElementById('warKpiActiveUsers');
+    const kOt = document.getElementById('warKpiOpenTickets');
+    const kPt = document.getElementById('warKpiPendingTickets');
+    const kSo = document.getElementById('warKpiStaffOnline');
+    if (kAu) kAu.textContent = String(s?.kpis?.activeUsers ?? 0);
+    if (kOt) kOt.textContent = String(s?.kpis?.openTickets ?? 0);
+    if (kPt) kPt.textContent = String(s?.kpis?.pendingTickets ?? 0);
+    if (kSo) kSo.textContent = String(s?.kpis?.staffOnline ?? 0);
+
+    const alertsEl = document.getElementById('warAlerts');
+    const alerts = Array.isArray(s?.alerts) ? s.alerts : [];
+    if (alertsEl) {
+        alertsEl.innerHTML = alerts.length
+            ? alerts
+                  .slice(0, 10)
+                  .map((a) => {
+                      const level = String(a?.level || 'info');
+                      const text = escapeHtml(String(a?.text || ''));
+                      return `<div class="warroom-alert ${escapeHtml(level)}">${text}</div>`;
+                  })
+                  .join('')
+            : '—';
+    }
+
+    const hotTicketsEl = document.getElementById('warHotTickets');
+    const hotTickets = Array.isArray(s?.hotTickets) ? s.hotTickets : [];
+    if (hotTicketsEl) {
+        hotTicketsEl.innerHTML = hotTickets.length
+            ? hotTickets
+                  .slice(0, 12)
+                  .map((t) => {
+                      const id = escapeHtml(String(t?.id || ''));
+                      const name = escapeHtml(String(t?.name || t?.socketId || ''));
+                      const status = escapeHtml(String(t?.status || 'open'));
+                      const priority = escapeHtml(String(t?.priority || 'normal'));
+                      const unread = Number(t?.unread || 0);
+                      const claim = t?.claim?.user ? `@${escapeHtml(String(t.claim.user))}` : 'unclaimed';
+                      return `
+                        <div class="warroom-item">
+                            <div class="warroom-item-main">
+                                <div class="warroom-item-title">${id} <span class="warroom-pill">${status}</span> <span class="warroom-pill">${priority}</span></div>
+                                <div class="warroom-item-sub">${name} · ${claim}${unread ? ` · ${unread} unread` : ''}</div>
+                            </div>
+                            <div class="warroom-item-actions">
+                                <button class="tool-btn" onclick="openTicketFromWarRoom('${id}')">Open</button>
+                                <button class="tool-btn" onclick="socket.emit('adminTicketClaim', { ticketId: '${id}', force: false })">Claim</button>
+                            </div>
+                        </div>
+                      `;
+                  })
+                  .join('')
+            : '—';
+    }
+
+    const hotChatsEl = document.getElementById('warHotChats');
+    const hotChats = Array.isArray(s?.hotChats) ? s.hotChats : [];
+    if (hotChatsEl) {
+        hotChatsEl.innerHTML = hotChats.length
+            ? hotChats
+                  .slice(0, 12)
+                  .map((c) => {
+                      const socketId = escapeHtml(String(c?.socketId || ''));
+                      const name = escapeHtml(String(c?.name || socketId || ''));
+                      const unread = Number(c?.unread || 0);
+                      const verified = Boolean(c?.verified);
+                      const connected = Boolean(c?.connected);
+                      const flags = [connected ? 'online' : 'offline', verified ? 'verified' : 'unverified'];
+                      return `
+                        <div class="warroom-item">
+                            <div class="warroom-item-main">
+                                <div class="warroom-item-title">${name} ${unread ? `<span class=\"warroom-pill\">${unread} unread</span>` : ''}</div>
+                                <div class="warroom-item-sub">${socketId} · ${escapeHtml(flags.join(' · '))}</div>
+                            </div>
+                            <div class="warroom-item-actions">
+                                <button class="tool-btn" onclick="openChatFromWarRoom('${socketId}')">Open</button>
+                            </div>
+                        </div>
+                      `;
+                  })
+                  .join('')
+            : '—';
+    }
+
+    const lastEl = document.getElementById('warLastUpdated');
+    if (lastEl) {
+        const at = s?.at ? new Date(s.at) : null;
+        lastEl.textContent = at ? `Updated ${at.toLocaleTimeString()}` : '—';
+    }
 }
 
 function sendGuidedFixToSelectedChat() {
@@ -777,6 +897,10 @@ function setupSocketEvents() {
         }
     });
 
+    socket.on('adminWarRoomSnapshot', (snapshot) => {
+        renderWarRoom(snapshot);
+    });
+
     socket.on('adminTickets', (list) => {
         const arr = Array.isArray(list) ? list : [];
         ticketsById = new Map(arr.map((t) => [t.id, t]));
@@ -1217,6 +1341,11 @@ function showChats(btn) {
 function showTickets(btn) {
     switchSection('tickets', btn);
     socket.emit('adminInit');
+}
+
+function showWarRoom(btn) {
+    switchSection('warroom', btn);
+    socket.emit('adminWarRoomRequest');
 }
 
 function showSettings(btn) {
