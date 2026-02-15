@@ -29,6 +29,8 @@ const MAX_MESSAGE_TEXT = 1000;
 const MAX_NAME_LEN = 40;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_DATA_URL_LEN = 8_500_000;
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_DATA_URL_LEN = 17_000_000;
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
 
@@ -347,7 +349,8 @@ function ensureTicketForConversation(socketId) {
         priority: 'normal',
         assignee: null,
         claim: null,
-        form: null
+        form: null,
+        evidence: []
     };
     tickets.set(id, ticket);
     conv.ticketId = id;
@@ -389,6 +392,8 @@ function getTicketSummary(ticket) {
         lastText: conv?.messages?.length ? conv.messages[conv.messages.length - 1].text : '',
         lastAt: conv?.messages?.length ? conv.messages[conv.messages.length - 1].timestamp : null,
         unread: conv?.unread || 0
+        ,
+        evidenceCount: Array.isArray(ticket.evidence) ? ticket.evidence.length : 0
     };
 }
 
@@ -838,6 +843,23 @@ io.on('connection', (socket) => {
             }
         };
 
+        const ticket = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        if (ticket) {
+            const ev = {
+                id: `E-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                at: new Date().toISOString(),
+                kind: 'image',
+                name: safeText(payload && payload.name, 120) || 'image',
+                mime,
+                size,
+                dataUrl
+            };
+            if (!Array.isArray(ticket.evidence)) ticket.evidence = [];
+            ticket.evidence.push(ev);
+            ticket.updatedAt = new Date().toISOString();
+            broadcastAdminTickets();
+        }
+
         messages.push(message);
         conv.messages.push(message);
         conv.unread += 1;
@@ -853,6 +875,99 @@ io.on('connection', (socket) => {
             `**File:** ${(safeText(payload && payload.name, 80) || 'image')}`,
             `**Size:** ${Math.round(size / 1024)} KB`
         ]);
+    });
+
+    socket.on('sendFile', (payload) => {
+        if (isStaff) return;
+
+        if (lockdownState.enabled) {
+            socket.emit('newMessage', {
+                id: Date.now(),
+                user: 'System',
+                text: 'Chat is temporarily locked by staff. Please try again soon.',
+                timestamp: new Date(),
+                type: 'system',
+                socketId: socket.id
+            });
+            return;
+        }
+
+        const conv = conversations.get(socket.id);
+        if (!conv) return;
+        if (conv.banned) return;
+        if (conv.mutedUntil && Date.now() < Number(new Date(conv.mutedUntil))) return;
+
+        const limit = recordAndCheckRate({ socket, kind: 'image' });
+        if (!limit.ok) return;
+
+        conv.lastSeenAt = new Date().toISOString();
+        ensureTicketForConversation(socket.id);
+
+        const dataUrl = String(payload && payload.dataUrl ? payload.dataUrl : '');
+        const size = Number(payload && payload.size ? payload.size : 0);
+        const mime = String(payload && payload.mime ? payload.mime : '').toLowerCase();
+        const name = safeText(payload && payload.name, 120) || 'file';
+
+        if (!dataUrl || dataUrl.length > MAX_PDF_DATA_URL_LEN) return;
+        if (!Number.isFinite(size) || size <= 0 || size > MAX_PDF_BYTES) return;
+        if (mime !== 'application/pdf') return;
+        if (!dataUrl.startsWith('data:application/pdf')) return;
+
+        const message = {
+            id: Date.now(),
+            user: safeUserLabel(payload && payload.user),
+            text: '[file]',
+            timestamp: new Date(),
+            type: 'user',
+            socketId: socket.id,
+            file: {
+                dataUrl,
+                mime,
+                size,
+                name
+            }
+        };
+
+        messages.push(message);
+        conv.messages.push(message);
+        conv.unread += 1;
+
+        const ticket = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        if (ticket) {
+            const ev = {
+                id: `E-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                at: new Date().toISOString(),
+                kind: 'pdf',
+                name,
+                mime,
+                size,
+                dataUrl
+            };
+            if (!Array.isArray(ticket.evidence)) ticket.evidence = [];
+            ticket.evidence.push(ev);
+            ticket.updatedAt = new Date().toISOString();
+            broadcastAdminTickets();
+        }
+
+        io.to(socket.id).emit('newMessage', message);
+        io.to('admins').emit('adminMessage', { socketId: socket.id, message });
+        broadcastAdminConversations();
+
+        const t = conv?.ticketId ? tickets.get(conv.ticketId) : null;
+        discordNotify('📄 User PDF upload', [
+            t?.id ? `**Ticket:** ${t.id}` : `**Socket:** ${socket.id}`,
+            `**User:** ${safeUserLabel(payload && payload.user)}`,
+            `**File:** ${name}`,
+            `**Size:** ${Math.round(size / 1024)} KB`
+        ]);
+
+        pushAudit({
+            type: 'evidence',
+            action: 'upload',
+            by: safeUserLabel(payload && payload.user) || 'user',
+            socketId: socket.id,
+            details: { kind: 'pdf', name, size }
+        });
     });
 
     socket.on('setUserName', (payload) => {
@@ -970,6 +1085,16 @@ io.on('connection', (socket) => {
         broadcastAdminTickets();
         socket.emit('lockdownUpdate', lockdownState);
         socket.emit('adminAuditLogInit', auditLog);
+    });
+
+    socket.on('adminGetTicketEvidence', ({ ticketId }) => {
+        if (!isStaff) return;
+        const id = String(ticketId || '');
+        if (!id) return;
+        const t = tickets.get(id);
+        if (!t) return;
+        const ev = Array.isArray(t.evidence) ? t.evidence.slice(-60) : [];
+        socket.emit('adminTicketEvidence', { ticketId: id, evidence: ev });
     });
 
     socket.on('adminSetLockdown', ({ enabled, reason }) => {

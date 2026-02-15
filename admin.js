@@ -17,6 +17,8 @@ let adminLockdownAlarm = { osc: null, gain: null, timer: null };
 
 let adminAuditLog = [];
 
+let ticketEvidenceById = new Map();
+
 const CANNED_RESPONSES = {
     '1': 'Thanks for reaching out — what’s your username and what happened?',
     '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
@@ -235,6 +237,12 @@ function selectTicket(ticketId, el) {
         agentViewEl.textContent = `${online} • last seen ${lastSeen} • ${path} • ${ua}`;
     }
 
+    const evidenceEl = document.getElementById('ticketEvidence');
+    if (evidenceEl) {
+        evidenceEl.textContent = 'Loading…';
+    }
+    socket.emit('adminGetTicketEvidence', { ticketId: id });
+
     const formEl = document.getElementById('ticketForm');
     if (formEl) {
         if (t.form && (t.form.issue || t.form.desc)) {
@@ -371,6 +379,16 @@ function setupSocketEvents() {
         }
     });
 
+    socket.on('adminTicketEvidence', (payload) => {
+        const id = payload?.ticketId;
+        if (!id) return;
+        const ev = Array.isArray(payload?.evidence) ? payload.evidence : [];
+        ticketEvidenceById.set(String(id), ev);
+        if (selectedTicketId && String(selectedTicketId) === String(id)) {
+            renderTicketEvidence(String(id));
+        }
+    });
+
     socket.on('adminAiTicketResult', (payload) => {
         const id = payload?.ticketId;
         const ai = payload?.ai;
@@ -479,6 +497,43 @@ function renderAuditLog() {
             return `<div class="audit-item"><span class="audit-time">${escapeHtml(at)}</span><span class="audit-pill">${type}</span><span class="audit-action">${action}</span><span class="audit-by">by ${by}${tail}</span></div>`;
         })
         .join('');
+}
+
+function renderTicketEvidence(ticketId) {
+    const el = document.getElementById('ticketEvidence');
+    if (!el) return;
+    const list = ticketEvidenceById.get(String(ticketId)) || [];
+    if (!Array.isArray(list) || !list.length) {
+        el.textContent = '—';
+        return;
+    }
+
+    const items = list
+        .slice()
+        .reverse()
+        .slice(0, 12)
+        .map((e) => {
+            const kind = String(e?.kind || '').toLowerCase();
+            const name = escapeHtml(String(e?.name || kind || 'file'));
+            const size = Number(e?.size || 0);
+            const sizeKb = size ? `${Math.round(size / 1024)} KB` : '';
+            const at = e?.at ? new Date(e.at).toLocaleString() : '';
+            const meta = [sizeKb, at].filter(Boolean).join(' • ');
+            const dataUrl = e?.dataUrl ? String(e.dataUrl) : '';
+
+            if (kind === 'image' && dataUrl) {
+                return `<div class="evidence-card"><div class="evidence-top"><span class="evidence-kind">image</span><span class="evidence-meta">${escapeHtml(meta)}</span></div><img class="evidence-image" src="${escapeHtml(dataUrl)}" alt="evidence" /><div class="evidence-name">${name}</div></div>`;
+            }
+
+            if (kind === 'pdf' && dataUrl) {
+                return `<a class="evidence-card evidence-file" href="${escapeHtml(dataUrl)}" download="${name}"><div class="evidence-top"><span class="evidence-kind">pdf</span><span class="evidence-meta">${escapeHtml(meta)}</span></div><div class="evidence-file-row"><i class="fas fa-file-pdf"></i><span class="evidence-name">${name}</span></div><div class="evidence-cta">Download</div></a>`;
+            }
+
+            return `<div class="evidence-card evidence-file"><div class="evidence-top"><span class="evidence-kind">file</span><span class="evidence-meta">${escapeHtml(meta)}</span></div><div class="evidence-file-row"><i class="fas fa-file"></i><span class="evidence-name">${name}</span></div></div>`;
+        })
+        .join('');
+
+    el.innerHTML = `<div class="evidence-grid">${items}</div>`;
 }
 
 function toggleLockdownFromUi() {
@@ -1094,7 +1149,28 @@ function appendChatMessage(message) {
         addAdminImageMessage(message.image.dataUrl, message.type || 'user');
         return;
     }
+    if (message.file && message.file.dataUrl) {
+        addAdminFileMessage(message.file, message.type || 'user');
+        return;
+    }
     addAdminMessage(message.text || '', message.type || 'user');
+}
+
+function addAdminFileMessage(file, type) {
+    const chatMessages = document.getElementById('adminChatMessages');
+    if (!chatMessages) return;
+    const dataUrl = String(file?.dataUrl || '');
+    const mime = String(file?.mime || '').toLowerCase();
+    const name = escapeHtml(String(file?.name || 'file'));
+    const size = Number(file?.size || 0);
+    const sizeText = size ? `${Math.round(size / 1024)} KB` : '';
+
+    const icon = mime === 'application/pdf' ? 'file-pdf' : 'file';
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.innerHTML = `<div class="message-content"><a class="file-card" href="${escapeHtml(dataUrl)}" download="${name}"><i class="fas fa-${icon}"></i><span>${name}</span><em>${escapeHtml(sizeText)}</em></a></div>`;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function addAdminImageMessage(dataUrl, type) {

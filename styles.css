@@ -1058,6 +1058,124 @@ nav:hover {
     display: block;
 }
 
+.file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.file-card i {
+    width: 34px;
+    height: 34px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 106, 0, 0.12);
+    border: 1px solid rgba(255, 106, 0, 0.22);
+}
+
+.file-card em {
+    margin-left: auto;
+    font-style: normal;
+    color: rgba(245, 246, 247, 0.6);
+    font-weight: 900;
+}
+
+.ticket-evidence {
+    width: 100%;
+}
+
+.evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.evidence-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.evidence-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.evidence-kind {
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 106, 0, 0.10);
+    border: 1px solid rgba(255, 106, 0, 0.22);
+}
+
+.evidence-meta {
+    color: rgba(245, 246, 247, 0.55);
+    font-weight: 800;
+    font-size: 11px;
+    text-align: right;
+}
+
+.evidence-image {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    display: block;
+}
+
+.evidence-name {
+    margin-top: 8px;
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(245, 246, 247, 0.88);
+    word-break: break-word;
+}
+
+.evidence-file {
+    display: block;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.evidence-file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.evidence-cta {
+    margin-top: 8px;
+    font-weight: 900;
+    font-size: 12px;
+    color: rgba(245, 246, 247, 0.7);
+}
+
+@media (max-width: 520px) {
+    .evidence-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .chat-input-wrapper input {
     flex: 1;
     background: rgba(255, 255, 255, 0.06);

@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (msg && msg.id != null) seenMessageIds.add(String(msg.id));
             if (msg && msg.image && msg.image.dataUrl) {
                 addImageMessage(msg.image.dataUrl, msg?.type || 'user');
+            } else if (msg && msg.file && msg.file.dataUrl) {
+                addFileMessage(msg.file, msg?.type || 'user');
             } else {
                 addMessage(msg?.text || '', msg?.type || 'user');
             }
@@ -42,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (msgId) seenMessageIds.add(msgId);
         if (message && message.image && message.image.dataUrl) {
             addImageMessage(message.image.dataUrl, message?.type || 'user');
+        } else if (message && message.file && message.file.dataUrl) {
+            addFileMessage(message.file, message?.type || 'user');
         } else {
             addMessage(message?.text || '', message?.type || 'user');
         }
@@ -349,6 +353,24 @@ function addImageMessage(dataUrl, type) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
+function addFileMessage(file, type) {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer) return;
+
+    const dataUrl = String(file?.dataUrl || '');
+    const mime = String(file?.mime || '').toLowerCase();
+    const name = escapeHtml(String(file?.name || 'file'));
+    const size = Number(file?.size || 0);
+    const sizeText = size ? `${Math.round(size / 1024)} KB` : '';
+
+    const icon = mime === 'application/pdf' ? 'file-pdf' : 'file';
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    messageDiv.innerHTML = `<div class="message-content"><a class="file-card" href="${escapeHtml(dataUrl)}" download="${name}"><i class="fas fa-${icon}"></i><span>${name}</span><em>${escapeHtml(sizeText)}</em></a></div>`;
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
@@ -369,20 +391,34 @@ function handleChatImageSelected(event) {
     if (input) input.value = '';
 
     const mime = String(file.type || '').toLowerCase();
-    if (mime !== 'image/png' && mime !== 'image/jpeg' && mime !== 'image/webp') return;
-    if (file.size > 5 * 1024 * 1024) return;
+    const isImage = mime === 'image/png' || mime === 'image/jpeg' || mime === 'image/webp';
+    const isPdf = mime === 'application/pdf';
+    if (!isImage && !isPdf) return;
+    if (isImage && file.size > 5 * 1024 * 1024) return;
+    if (isPdf && file.size > 10 * 1024 * 1024) return;
 
     const reader = new FileReader();
     reader.onload = () => {
         const dataUrl = String(reader.result || '');
-        if (!dataUrl.startsWith('data:image/')) return;
-        socket.emit('sendImage', {
-            dataUrl,
-            size: file.size,
-            mime,
-            name: file.name,
-            user: displayName
-        });
+        if (isImage) {
+            if (!dataUrl.startsWith('data:image/')) return;
+            socket.emit('sendImage', {
+                dataUrl,
+                size: file.size,
+                mime,
+                name: file.name,
+                user: displayName
+            });
+        } else if (isPdf) {
+            if (!dataUrl.startsWith('data:application/pdf')) return;
+            socket.emit('sendFile', {
+                dataUrl,
+                size: file.size,
+                mime,
+                name: file.name,
+                user: displayName
+            });
+        }
     };
     reader.readAsDataURL(file);
 }
