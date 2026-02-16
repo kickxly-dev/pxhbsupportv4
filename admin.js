@@ -10,6 +10,141 @@ const macros = [
     { key: 'wrap', title: 'Wrap Up', text: 'Awesome — I’m going to close this out. If it comes back, reply here and we’ll pick it up.' }
 ];
 
+let shiftHandoffState = { isOpen: false, text: '' };
+
+function openShiftHandoff() {
+    refreshShiftHandoff();
+    const modal = document.getElementById('handoffModal');
+    if (modal) modal.style.display = 'flex';
+    shiftHandoffState.isOpen = true;
+}
+
+function closeShiftHandoff() {
+    const modal = document.getElementById('handoffModal');
+    if (modal) modal.style.display = 'none';
+    shiftHandoffState.isOpen = false;
+}
+
+function refreshShiftHandoff() {
+    const text = buildShiftHandoffText();
+    shiftHandoffState.text = text;
+    const el = document.getElementById('handoffText');
+    if (el) el.textContent = text;
+}
+
+function buildShiftHandoffText() {
+    const now = new Date();
+    const staff = sessionStorage.getItem('staffUser') || 'Staff';
+    const convs = Array.from(conversationsById.values());
+    const tickets = Array.from(ticketsById.values());
+
+    const open = tickets.filter((t) => String(t?.status || 'open') === 'open');
+    const pending = tickets.filter((t) => String(t?.status || 'open') === 'pending');
+    const urgent = tickets.filter((t) => String(t?.priority || 'normal') === 'urgent' || String(t?.priority || 'normal') === 'high');
+    const claimed = tickets.filter((t) => t?.claim?.user);
+    const mine = tickets.filter((t) => t?.claim?.user && String(t.claim.user) === String(staff));
+
+    const hotUnread = tickets
+        .filter((t) => Number(t?.unread || 0) > 0)
+        .slice()
+        .sort((a, b) => Number(b?.unread || 0) - Number(a?.unread || 0))
+        .slice(0, 8);
+
+    const needsHandoff = tickets
+        .filter((t) => String(t?.status || 'open') !== 'closed')
+        .filter((t) => String(t?.handoff || '').trim().length > 0)
+        .slice()
+        .sort((a, b) => {
+            const atA = a?.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+            const atB = b?.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+            return atB - atA;
+        })
+        .slice(0, 12);
+
+    const lines = [];
+    lines.push(`P.X HB Shift Handoff`);
+    lines.push(`Generated: ${now.toLocaleString()}`);
+    lines.push(`By: ${staff}`);
+    lines.push('');
+
+    lines.push('=== Overview ===');
+    lines.push(`Active users: ${convs.filter((c) => c?.connected).length}`);
+    lines.push(`Tickets: open ${open.length} • pending ${pending.length} • urgent/high ${urgent.length}`);
+    lines.push(`Claims: total ${claimed.length} • mine ${mine.length}`);
+    lines.push('');
+
+    lines.push('=== My claimed tickets ===');
+    if (!mine.length) {
+        lines.push('—');
+    } else {
+        mine
+            .slice()
+            .sort((a, b) => {
+                const atA = a?.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                const atB = b?.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                return atB - atA;
+            })
+            .slice(0, 20)
+            .forEach((t) => {
+                const pri = String(t?.priority || 'normal');
+                const st = String(t?.status || 'open');
+                const name = String(t?.name || t?.socketId || '').slice(0, 40);
+                const unread = Number(t?.unread || 0);
+                const hand = String(t?.handoff || '').trim();
+                const handTail = hand ? ` • handoff: ${hand}` : '';
+                lines.push(`${t.id} • ${st} • ${pri} • unread ${unread} • ${name}${handTail}`);
+            });
+    }
+    lines.push('');
+
+    lines.push('=== Tickets with handoff set ===');
+    if (!needsHandoff.length) {
+        lines.push('—');
+    } else {
+        needsHandoff.forEach((t) => {
+            const pri = String(t?.priority || 'normal');
+            const st = String(t?.status || 'open');
+            const who = t?.claim?.user ? `@${t.claim.user}` : 'unclaimed';
+            const hand = String(t?.handoff || '').trim();
+            lines.push(`${t.id} • ${st} • ${pri} • ${who} • ${hand}`);
+        });
+    }
+    lines.push('');
+
+    lines.push('=== Unread hot tickets ===');
+    if (!hotUnread.length) {
+        lines.push('—');
+    } else {
+        hotUnread.forEach((t) => {
+            const pri = String(t?.priority || 'normal');
+            const st = String(t?.status || 'open');
+            const who = t?.claim?.user ? `@${t.claim.user}` : 'unclaimed';
+            const unread = Number(t?.unread || 0);
+            lines.push(`${t.id} • ${st} • ${pri} • ${who} • unread ${unread}`);
+        });
+    }
+
+    return lines.join('\n');
+}
+
+async function copyShiftHandoff() {
+    try {
+        const text = shiftHandoffState.text || buildShiftHandoffText();
+        await navigator.clipboard.writeText(text);
+        showToast({ title: 'Shift Handoff', message: 'Copied to clipboard.', type: 'success' });
+    } catch {
+        showToast({ title: 'Shift Handoff', message: 'Copy failed (clipboard permission).', type: 'warning' });
+    }
+}
+
+function downloadShiftHandoff() {
+    const text = shiftHandoffState.text || buildShiftHandoffText();
+    const staff = sessionStorage.getItem('staffUser') || 'Staff';
+    const safeStaff = String(staff).replace(/[^a-z0-9_-]+/gi, '_').slice(0, 24);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadText(`pxhb_shift_handoff_${safeStaff}_${stamp}.txt`, text);
+}
+
 function hydrateMacrosUi() {
     const select = document.getElementById('cannedSelect');
     if (!select) return;
@@ -1532,6 +1667,12 @@ function handleAdminHotkeys(event) {
     const key = String(event.key || '');
 
     if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
+        if (key.toLowerCase() === 'h') {
+            event.preventDefault();
+            openShiftHandoff();
+            return;
+        }
+
         if (key === '1' || key === '2' || key === '3') {
             const idx = Number(key) - 1;
             const suggestion = lastSmartReplies[idx];

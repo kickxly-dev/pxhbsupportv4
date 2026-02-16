@@ -130,6 +130,7 @@
                             <button class="tool-btn" onclick="socket.emit('adminInit')">Refresh Lists</button>
                             <button class="tool-btn" onclick="socket.emit('adminWarRoomRequest')">Refresh War Room</button>
                             <button class="tool-btn danger" onclick="toggleLockdownFromUi()">Toggle Lockdown</button>
+                            <button class="tool-btn" onclick="openShiftHandoff()">Shift Handoff</button>
                         </div>
                         <div class="warroom-ops-controls">
                             <label class="liveassist-toggle" style="justify-content:flex-start; gap:10px;">
@@ -416,6 +417,23 @@
             </div>
             <div class="replay-body">
                 <div class="replay-stream" id="replayStream"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="replay-modal" id="handoffModal" style="display:none;">
+        <div class="replay-modal-content">
+            <div class="replay-header">
+                <div class="replay-title">Shift Handoff</div>
+                <button class="replay-close" onclick="closeShiftHandoff()" aria-label="Close shift handoff"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="replay-controls">
+                <button class="tool-btn" onclick="copyShiftHandoff()">Copy</button>
+                <button class="tool-btn" onclick="downloadShiftHandoff()">Download</button>
+                <button class="tool-btn" onclick="refreshShiftHandoff()">Refresh</button>
+            </div>
+            <div class="replay-body">
+                <pre class="replay-stream" id="handoffText" style="white-space:pre-wrap; margin:0;"></pre>
             </div>
         </div>
     </div>
