@@ -1,6 +1,60 @@
 // P.X HB Admin Panel JavaScript
 const socket = io({ auth: { admin: true } });
 
+const macros = [
+    { key: 'greet', title: 'Greet', text: 'Hey {name} — thanks for reaching out. How can I help today?' },
+    { key: 'verify', title: 'Ask Verify', text: 'Before we continue, can you please complete verification?' },
+    { key: 'details', title: 'Request Details', text: 'Can you share a bit more detail about what happened and when it started?' },
+    { key: 'steps', title: 'Basic Steps', text: 'Quick check: please refresh, try an incognito window, and confirm your device/browser.' },
+    { key: 'billing', title: 'Billing Checklist', text: 'For billing, please confirm the email on the account and the last 4 of the card (do not send full card details).' },
+    { key: 'wrap', title: 'Wrap Up', text: 'Awesome — I’m going to close this out. If it comes back, reply here and we’ll pick it up.' }
+];
+
+function hydrateMacrosUi() {
+    const select = document.getElementById('cannedSelect');
+    if (!select) return;
+    const options = ['<option value="">Select macro…</option>']
+        .concat(
+            macros.map((m, idx) => {
+                const hotkey = idx < 9 ? `Alt+${idx + 1}` : '';
+                const label = hotkey ? `${m.title} (${hotkey})` : m.title;
+                return `<option value="${escapeHtml(String(m.key))}">${escapeHtml(label)}</option>`;
+            })
+        )
+        .join('');
+    select.innerHTML = options;
+}
+
+function getSelectedTicketForChat(socketId) {
+    const sid = String(socketId || '');
+    if (!sid) return null;
+    for (const t of ticketsById.values()) {
+        if (String(t?.socketId || '') === sid) return t;
+    }
+    return null;
+}
+
+function expandMacroText(template, { socketId } = {}) {
+    const sid = socketId ? String(socketId) : selectedChat ? String(selectedChat) : '';
+    const conv = sid ? conversationsById.get(sid) : null;
+    const t = sid ? getSelectedTicketForChat(sid) : null;
+    const name = conv?.name || sid || 'there';
+    const issue = t?.form?.issue || 'other';
+    const ticketId = t?.id || '';
+    const staff = sessionStorage.getItem('staffUser') || 'Staff';
+    const time = new Date().toLocaleTimeString();
+
+    const map = {
+        name: String(name),
+        issue: String(issue),
+        ticketId: String(ticketId),
+        staff: String(staff),
+        time: String(time)
+    };
+
+    return String(template || '').replace(/\{(name|issue|ticketId|staff|time)\}/g, (_, k) => map[k] ?? '');
+}
+
 function setOpsSfxFromUi() {
     opsSfxEnabled = Boolean(document.getElementById('opsSfxToggle')?.checked);
     try {
@@ -100,12 +154,6 @@ let replayState = {
     timer: null
 };
 
-const CANNED_RESPONSES = {
-    '1': 'Thanks for reaching out — what’s your username and what happened?',
-    '2': 'Can you send a screenshot and your device/browser? I’ll take a look.',
-    '3': 'We’re on it. Typical response time is a few minutes — thanks for your patience.'
-};
-
 let lastSmartReplies = [];
 
 // Initialize admin panel
@@ -132,6 +180,8 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('input', () => emitAdminTyping(true));
         input.addEventListener('blur', () => emitAdminTyping(false));
     }
+
+    hydrateMacrosUi();
 
     const unlock = () => {
         try {
@@ -605,11 +655,28 @@ function insertCanned() {
     const select = document.getElementById('cannedSelect');
     const input = document.getElementById('adminChatInput');
     if (!select || !input) return;
-    const val = String(select.value || '');
-    if (!val) return;
-    input.value = input.value ? `${input.value} ${val}` : val;
+    const key = String(select.value || '');
+    if (!key) return;
+    const macro = macros.find((m) => m.key === key);
+    if (!macro) return;
+    const expanded = expandMacroText(macro.text, { socketId: selectedChat });
+    input.value = input.value ? `${input.value} ${expanded}` : expanded;
     input.focus();
     emitAdminTyping(true);
+    select.value = '';
+}
+
+function sendCanned() {
+    const select = document.getElementById('cannedSelect');
+    const input = document.getElementById('adminChatInput');
+    if (!select || !input) return;
+    const key = String(select.value || '');
+    if (!key) return;
+    const macro = macros.find((m) => m.key === key);
+    if (!macro) return;
+    const expanded = expandMacroText(macro.text, { socketId: selectedChat });
+    input.value = expanded;
+    sendAdminMessage();
     select.value = '';
 }
 
@@ -743,6 +810,20 @@ function selectTicket(ticketId, el) {
     if (statusSel) statusSel.value = String(t.status || 'open');
     if (priSel) priSel.value = String(t.priority || 'normal');
     if (asgInput) asgInput.value = String(t.assignee || '');
+
+    const handoff = document.getElementById('ticketHandoff');
+    const notes = document.getElementById('ticketInternalNotes');
+    if (handoff) handoff.value = String(t.handoff || '');
+    if (notes) notes.value = String(t.internalNotes || '');
+}
+
+function saveTicketWorkflowEdits() {
+    if (!selectedTicketId) return;
+    const t = ticketsById.get(selectedTicketId);
+    if (!t) return;
+    const handoff = document.getElementById('ticketHandoff')?.value;
+    const internalNotes = document.getElementById('ticketInternalNotes')?.value;
+    socket.emit('adminTicketWorkflowUpdate', { ticketId: selectedTicketId, handoff, internalNotes });
 }
 
 function saveTicketEdits() {
@@ -1431,6 +1512,23 @@ function handleAdminHotkeys(event) {
     const isChatInputFocused = activeEl && activeEl.id === 'adminChatInput';
     if (!isChatInputFocused) return;
 
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        const key = String(event.key || '').toLowerCase();
+        if (/^[1-9]$/.test(key)) {
+            const idx = Number(key) - 1;
+            const macro = macros[idx];
+            if (!macro) return;
+            event.preventDefault();
+            const input = document.getElementById('adminChatInput');
+            if (!input) return;
+            const expanded = expandMacroText(macro.text, { socketId: selectedChat });
+            input.value = input.value ? `${input.value} ${expanded}` : expanded;
+            input.focus();
+            emitAdminTyping(true);
+            return;
+        }
+    }
+
     const key = String(event.key || '');
 
     if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
@@ -1464,18 +1562,6 @@ function handleAdminHotkeys(event) {
     }
 
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-
-    if (CANNED_RESPONSES[key]) {
-        event.preventDefault();
-        const input = document.getElementById('adminChatInput');
-        if (input) {
-            const base = CANNED_RESPONSES[key];
-            input.value = input.value ? `${input.value} ${base}` : base;
-            input.focus();
-            emitAdminTyping(true);
-        }
-        return;
-    }
 }
 
 // Navigation functions

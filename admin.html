@@ -226,7 +226,12 @@
                             </div>
                             <div class="tool-row">
                                 <label>Canned</label>
-                                <select id="cannedSelect" onchange="insertCanned()"></select>
+                                <select id="cannedSelect"></select>
+                                <div class="guidedfix-admin-actions">
+                                    <button class="tool-btn" onclick="insertCanned()">Insert</button>
+                                    <button class="tool-btn" onclick="sendCanned()">Send</button>
+                                </div>
+                                <div class="warroom-presets-hint" style="margin-top:8px;">Alt+1..9 inserts macro • Ctrl+Shift+1..3 inserts smart reply</div>
                             </div>
                         </div>
                         <div class="chat-messages" id="adminChatMessages">
@@ -315,6 +320,14 @@
                                 <div class="tool-row">
                                     <label>Assignee</label>
                                     <input type="text" id="ticketAssignee" placeholder="(optional)" onblur="saveTicketEdits()">
+                                </div>
+                                <div class="tool-row">
+                                    <label>Handoff</label>
+                                    <input type="text" id="ticketHandoff" placeholder="(optional)" onblur="saveTicketWorkflowEdits()">
+                                </div>
+                                <div class="tool-row">
+                                    <label>Internal Notes</label>
+                                    <textarea id="ticketInternalNotes" placeholder="Staff-only notes..." onblur="saveTicketWorkflowEdits()"></textarea>
                                 </div>
                                 <div class="tool-row tool-actions ticket-actions">
                                     <button class="tool-btn" onclick="ticketQuickSet('open')">Reopen</button>

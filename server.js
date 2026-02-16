@@ -356,6 +356,8 @@ function ensureTicketForConversation(socketId) {
         status: 'open',
         priority: 'normal',
         assignee: null,
+        handoff: null,
+        internalNotes: '',
         claim: null,
         form: null,
         evidence: []
@@ -382,6 +384,8 @@ function getTicketSummary(ticket) {
         status: ticket.status,
         priority: ticket.priority,
         assignee: ticket.assignee,
+        handoff: ticket.handoff || null,
+        internalNotes: ticket.internalNotes || '',
         claim: ticket.claim || null,
         form: ticket.form || null,
         ai: ticket.ai || null,
@@ -1738,6 +1742,40 @@ io.on('connection', (socket) => {
             priority !== undefined ? `**Priority:** ${ticket.priority}` : null,
             assignee !== undefined ? `**Assignee:** ${ticket.assignee || 'unassigned'}` : null
         ]);
+    });
+
+    socket.on('adminTicketWorkflowUpdate', ({ ticketId, handoff, internalNotes }) => {
+        if (!isStaff) return;
+        const id = safeText(ticketId, 32);
+        if (!id) return;
+        const ticket = tickets.get(id);
+        if (!ticket) return;
+
+        const user = staffStatus.user || 'Staff';
+        if (ticket.claim && ticket.claim.user && ticket.claim.user !== user) {
+            denyAdminAction(socket, 'ticket_workflow', 'Ticket is claimed by another staff member. Force take or ask them to release.');
+            return;
+        }
+
+        if (handoff !== undefined) {
+            const h = safeText(handoff, 80);
+            ticket.handoff = h || null;
+        }
+        if (internalNotes !== undefined) {
+            ticket.internalNotes = String(internalNotes || '').slice(0, 4000);
+        }
+
+        ticket.updatedAt = new Date().toISOString();
+        broadcastAdminTickets();
+        broadcastAdminConversations();
+
+        pushAudit({
+            type: 'staff',
+            action: 'ticket_workflow_update',
+            by: user,
+            socketId: ticket.socketId,
+            details: { ticketId: ticket.id, handoff: ticket.handoff ? true : false, notesLen: ticket.internalNotes ? ticket.internalNotes.length : 0 }
+        });
     });
 
     socket.on('adminTicketClaim', ({ ticketId, force }) => {
